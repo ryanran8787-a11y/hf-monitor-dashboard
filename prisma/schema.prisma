@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // Supabase transaction pooler (6543)
+  directUrl = env("DIRECT_URL")   // Supabase session pooler (5432)，給 migrate/db push 用
 }
 
 // 全站熱門快照：每次 collector 跑完寫一輪

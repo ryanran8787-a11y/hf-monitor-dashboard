@@ -14,8 +14,11 @@ jobs:
         with: { node-version: 20 }
       - run: npm ci
       - run: npx prisma db push
-        env: { DATABASE_URL: ${{ secrets.DATABASE_URL }} }
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
       - run: npm run collect
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
