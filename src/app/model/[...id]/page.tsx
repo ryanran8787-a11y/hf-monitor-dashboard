@@ -8,10 +8,10 @@ export const revalidate = 600;
 const WINDOW_DAYS = 7;
 
 const SORT_META: Record<string, { label: string; color: string }> = {
-  trendingScore: { label: "🔥熱門", color: "#f59e0b" },
-  likes: { label: "👍Likes", color: "#38bdf8" },
-  downloads: { label: "⬇下載", color: "#fb923c" },
-  lastModified: { label: "🆕新動態", color: "#a78bfa" },
+  trendingScore: { label: "熱門", color: "#d97706" },
+  likes: { label: "Likes", color: "#0284c7" },
+  downloads: { label: "下載", color: "#ea580c" },
+  lastModified: { label: "新動態", color: "#7c3aed" },
 };
 
 function hfUrl(kind: string, hfId: string) {
@@ -87,17 +87,17 @@ export default async function ModelPage({
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="card"><div className="muted">Likes</div><div className="text-2xl font-bold">{likes?.toLocaleString?.() ?? "-"}</div></div>
-        <div className="card"><div className="muted">Downloads</div><div className="text-2xl font-bold">{downloads?.toLocaleString?.() ?? "-"}</div></div>
+        <div className="card"><div className="muted">Likes</div><div className="stat-num mt-1">{likes?.toLocaleString?.() ?? "-"}</div></div>
+        <div className="card"><div className="muted">Downloads</div><div className="stat-num mt-1">{downloads?.toLocaleString?.() ?? "-"}</div></div>
         <div className="card">
           <div className="muted">近 7 天 Likes 成長</div>
-          <div className="text-2xl font-bold text-sky-400">
+          <div className="mt-1 text-2xl font-semibold tracking-tight text-sky-700">
             {likeGrow != null ? `+${likeGrow.toLocaleString()}${likePct != null ? ` (${likePct.toFixed(1)}%)` : ""}` : "-"}
           </div>
         </div>
         <div className="card">
-          <div className="muted">🔥熱門排名變化</div>
-          <div className={`text-2xl font-bold ${rankDelta != null && rankDelta > 0 ? "text-emerald-400" : rankDelta != null && rankDelta < 0 ? "text-rose-400" : ""}`}>
+          <div className="muted">熱門排名變化</div>
+          <div className={`mt-1 text-2xl font-semibold tracking-tight ${rankDelta != null && rankDelta > 0 ? "text-emerald-600" : rankDelta != null && rankDelta < 0 ? "text-rose-600" : ""}`}>
             {rankFirst != null && rankLast != null
               ? `#${rankFirst} → #${rankLast}${rankDelta !== 0 ? (rankDelta! > 0 ? ` (▲${rankDelta})` : ` (▼${-rankDelta!})`) : ""}`
               : "未進榜/累積中"}
@@ -107,17 +107,17 @@ export default async function ModelPage({
 
       {live?.tags?.length > 0 && (
         <div className="card">
-          <h2 className="mb-2 font-semibold">Tags</h2>
+          <h2 className="section-title mb-3">Tags</h2>
           <div className="flex flex-wrap gap-2">
             {(live.tags as string[]).slice(0, 30).map((t: string) => (
-              <span key={t} className="rounded-full border border-zinc-700 px-3 py-0.5 text-xs text-zinc-300">{t}</span>
+              <span key={t} className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">{t}</span>
             ))}
           </div>
         </div>
       )}
 
       <div className="card">
-        <h2 className="mb-2 font-semibold">🏆 排名走勢（近 7 天 · HF 看不到的亮點）</h2>
+        <h2 className="section-title mb-3">排名走勢（近 7 天）</h2>
         {rankRows.length >= 2 && series.length > 0 ? (
           <>
             <RankChart data={rankRows} series={series} />
@@ -129,7 +129,7 @@ export default async function ModelPage({
       </div>
 
       <div className="card">
-        <h2 className="mb-2 font-semibold">Likes / Downloads 絕對值（近 7 天）</h2>
+        <h2 className="section-title mb-3">Likes / Downloads（近 7 天）</h2>
         {absRows.length >= 2 ? (
           <HistoryLine data={absRows} />
         ) : (

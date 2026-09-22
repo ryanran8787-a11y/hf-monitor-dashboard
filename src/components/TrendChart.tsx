@@ -7,13 +7,13 @@ export default function TrendChart({ data }: { data: { name: string; value: numb
     <div style={{ width: "100%", height: 260 }}>
       <ResponsiveContainer>
         <BarChart data={short}>
-          <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#a1a1aa" }} interval={0} angle={-20} height={60} />
-          <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} width={60} tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)} />
+          <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#71717a" }} interval={0} angle={-20} height={60} />
+          <YAxis tick={{ fontSize: 11, fill: "#71717a" }} width={60} tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)} />
           <Tooltip
-            contentStyle={{ background: "#18181b", border: "1px solid #3f3f46" }}
+            contentStyle={{ background: "#ffffff", border: "1px solid #e4e4e7", borderRadius: 8, fontSize: 12 }}
             formatter={(v: any) => [Number(v).toLocaleString(), ""]}
           />
-          <Bar dataKey="value" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="value" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -14,20 +14,20 @@ export default function RankChart({ data, series }: { data: Record<string, any>[
     <div style={{ width: "100%", height: 300 }}>
       <ResponsiveContainer>
         <LineChart data={data}>
-          <CartesianGrid stroke="#27272a" strokeDasharray="3 3" />
-          <XAxis dataKey="t" tick={{ fontSize: 11, fill: "#a1a1aa" }} minTickGap={50} />
+          <CartesianGrid stroke="#ececf1" strokeDasharray="3 3" />
+          <XAxis dataKey="t" tick={{ fontSize: 11, fill: "#71717a" }} minTickGap={50} />
           <YAxis
             reversed
             domain={[1, "dataMax"]}
-            tick={{ fontSize: 11, fill: "#a1a1aa" }}
+            tick={{ fontSize: 11, fill: "#71717a" }}
             width={50}
             tickFormatter={(v: number) => `#${v}`}
           />
           <Tooltip
-            contentStyle={{ background: "#18181b", border: "1px solid #3f3f46" }}
+            contentStyle={{ background: "#ffffff", border: "1px solid #e4e4e7", borderRadius: 8, fontSize: 12 }}
             formatter={(v: any) => (v == null ? ["未進榜", ""] : [`#${v}`, ""])}
           />
-          <Legend />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
           {series.map((s) => (
             <Line
               key={s.key}
