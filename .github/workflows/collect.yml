@@ -1,0 +1,21 @@
+name: collect-hf
+
+on:
+  schedule:
+    - cron: "17 * * * *"  # 每小時
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npx prisma db push
+        env: { DATABASE_URL: ${{ secrets.DATABASE_URL }} }
+      - run: npm run collect
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}

@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+dist/
+*.db
+*.db-journal
+.env
+.env.local
+prisma/migrations/
+coverage/

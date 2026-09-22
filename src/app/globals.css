@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { @apply bg-zinc-950 text-zinc-100; }
+.card { @apply rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4; }
+.muted { @apply text-sm text-zinc-400; }
+table.data { @apply w-full text-sm; }
+table.data th { @apply text-left font-medium text-zinc-400 px-3 py-2 border-b border-zinc-800; }
+table.data td { @apply px-3 py-2 border-b border-zinc-800/60; }
+a.link { @apply text-sky-400 hover:underline; }

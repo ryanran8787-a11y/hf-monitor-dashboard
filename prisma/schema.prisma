@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 全站熱門快照：每次 collector 跑完寫一輪
+model Snapshot {
+  id        Int      @id @default(autoincrement())
+  kind      String   // model | dataset | space
+  hfId      String
+  author    String?
+  likes     Int      @default(0)
+  downloads Int      @default(0)
+  task      String?
+  tags      String   @default("[]")
+  lastModified String?
+  rank      Int      @default(0)
+  sortBy    String   @default("likes") // 本輪排序依據
+  createdAt DateTime @default(now())
+
+  @@index([kind, createdAt])
+  @@index([hfId, createdAt])
+}
+
+// 單一 repo 的歷史曲線（Top N + 使用者追蹤才會持續寫）
+model MetricHistory {
+  id        Int      @id @default(autoincrement())
+  kind      String
+  hfId      String
+  likes     Int
+  downloads Int
+  createdAt DateTime @default(now())
+
+  @@index([kind, hfId, createdAt])
+}
