@@ -8,3 +8,5 @@ dist/
 .env.local
 prisma/migrations/
 coverage/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
