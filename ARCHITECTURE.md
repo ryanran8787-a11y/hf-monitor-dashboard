@@ -1,31 +1,31 @@
-# 架構說明 v1.0（定案）
+# 架構說明 v1.1
 
 ## 需求
-- 全站熱門（非指定追蹤）：models / datasets / spaces Top 100 by likes/downloads
-- 技術棧不限 → 選維護成本最低：Next.js 單體 + Prisma
-- 推上 GitHub，用 GitHub Actions 當免費 Cron
-- Discord/Telegram：Phase 2，不進 MVP
+- 全站熱門：models / datasets / spaces，分 4 榜（🔥熱門 trendingScore / 👍Likes / ⬇下載 / 🆕新動態 lastModified）
+- 技術棧不限 → Next.js 單體 + Prisma + Supabase Postgres
+- 推上 GitHub，用 GitHub Actions 當免費 Cron（每小時）
+- Discord 漲幅告警：已上線（`DISCORD_WEBHOOK_URL`）
 
 ## 決策
 | 議題 | 選擇 | 理由 |
 |---|---|---|
-| 前後端 | Next.js 14 App Router 單體 | 一個 repo、Vercel 一鍵部署，不用管 CORS/雙服務 |
-| 語言 | TypeScript | HF API 只是 REST，Python SDK 優勢不大 |
-| DB | SQLite（本機）/ Postgres（上線），Prisma 切換 | MVP 零依賴，上線換 connection string 即可 |
-| 排程 | scripts/collect.mjs + GitHub Actions hourly + /api/cron/collect | 免費、免 Redis/Celery |
-| 圖表 | Recharts | 輕量，Top10 Bar 先行；歷史曲線 Phase 2 補 LineChart |
-| 快取 | fetch next.revalidate=600 | 免 Redis，HF rate limit 靠 token + 間隔解決 |
+| 前後端 | Next.js 14 App Router 單體 | 一個 repo、Vercel 一鍵部署 |
+| DB | Supabase Postgres（pooler + directUrl） | Actions 持久化；本機可用 SQLite（provider 切回即可） |
+| 排程 | scripts/collect.mjs + GitHub Actions hourly | 免費；Vercel Hobby cron 限每日一次故不用（`vercel.json` 已清空） |
+| 圖表 | Recharts（Bar + Line 雙軸） | 輕量 |
+| 快取 | fetch next.revalidate=600 | 免 Redis |
 
 ## 資料流
-1. Actions 每小時 `npm run collect` → 6 輪（3 kind × 2 sort）→ 寫 `Snapshot`（清舊寫新）+ Top20 寫 `MetricHistory`
-2. `/` 先讀 `Snapshot`，無資料 fallback 即時 HF API（首屏不空白）
-3. `/api/trending` 純透傳 HF（給除錯/前端擴充用）
+1. Actions 每小時 `npm run collect` → 12 輪（3 kind × 4 sort）→ `Snapshot`（清舊寫新）+ Top20 寫 `MetricHistory` + `Peak` 比對漲幅 → 超閾值 Discord 推播
+2. `/` 先讀 `Snapshot`（按 kind + sortBy），無資料 fallback 即時 HF API
+3. `/model/[...id]` 詳情：HF 單 repo API + `MetricHistory` 曲線（2 筆以上才畫線）
+4. `MetricHistory` 只留 90 天（collector 每輪順手清）
 
-## Phase 2 預留
-- `notify()` 空介面 → 接 `DISCORD_WEBHOOK_URL` / Telegram Bot
-- `MetricHistory` 已有 kind+hfId+time index → 可做 spike 偵測（downloads 日增 >30% 發事件）
-- Watchlist：加 `Watch` 表 + 簡單 form 即可，不需 auth（先 localStorage 也行）
+## 已知限制
+- 列表 API 不回 `lastModified`，`Updated` 欄實際吃 `createdAt`
+- 累積型指標（likes/downloads）永遠偏袒老模型；看新熱門請用 🔥熱門榜
+- Spaces 無 downloads 欄位 → 存 0
 
 ## 風險
-- HF 匿名配額低 → README 要求設 `HF_TOKEN`；collector 有 3 次 backoff
-- Spaces 無 downloads 欄位 → 存 0，前端顯示 `-`
+- HF 匿名配額低 → 設 `HF_TOKEN`；collector 有 3 次 backoff
+- `/api/cron/collect` 預設關閉（沒設 `CRON_SECRET` 回 503），避免被刷

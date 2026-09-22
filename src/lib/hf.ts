@@ -60,17 +60,3 @@ export async function fetchOne(kind: HFKind, hfId: string): Promise<any | null> 
   return res.json();
 }
 
-// Discord 通知（Phase 2 已啟用）。無 webhook 時靜默跳過，方便本機開發。
-export async function notify(text: string): Promise<void> {
-  const url = process.env.DISCORD_WEBHOOK_URL;
-  if (!url) return;
-  try {
-    await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: text.slice(0, 1900) }),
-    });
-  } catch (e) {
-    console.error("discord notify failed", e);
-  }
-}

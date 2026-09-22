@@ -109,5 +109,9 @@ if (alerts.length > 0) {
   console.log(`alerts: ${alerts.length}`);
   await discord(`🤗 HF Monitor 漲幅告警\n${alerts.join("\n")}`);
 }
+// 歷史曲線只留 90 天，避免免費用量爆炸
+const cutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000);
+const pruned = await db.metricHistory.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch(() => ({ count: 0 }));
+if (pruned.count > 0) console.log(`pruned ${pruned.count} old history rows`);
 console.log(`done total=${total}`);
 await db.$disconnect();

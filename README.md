@@ -1,12 +1,11 @@
 # HF Monitor — Hugging Face 全站熱門儀表盤
 
-MVP：每小時抓 HF Hub `models / datasets / spaces` 熱門榜，存快照 + 畫表。
-通知（Discord / Telegram）留到 Phase 2（`src/lib/hf.ts: notify()` 已預留介面）。
+每小時抓 HF Hub `models / datasets / spaces` 四榜（🔥熱門 / 👍Likes / ⬇下載 / 🆕新動態），存快照 + 畫表 + 漲幅 Discord 告警。
 
 ## 快速開始
 
 ```bash
-cp .env.example .env
+cp .env.example .env   # 填 Supabase 兩條 URL + HF_TOKEN（本機也可用 SQLite）
 npm install
 npx prisma db push
 npm run collect   # 抓一次資料（需網路）
@@ -21,10 +20,11 @@ HF Hub REST API ──> Collector (scripts/collect.mjs / POST /api/cron/collect)
                         ──> Next.js App Router (/, /api/trending)
 ```
 
-- `src/lib/hf.ts`：HF API 封裝 + 重試，帶 `HF_TOKEN` 提高配額
-- `prisma/schema.prisma`：`Snapshot` 最新榜單 + `MetricHistory` 曲線
+- `src/lib/hf.ts`：HF API 封裝（likes/downloads/lastModified/trendingScore 四排序），帶 `HF_TOKEN` 提高配額
+- `prisma/schema.prisma`：`Snapshot` 最新榜單 + `MetricHistory` 曲線（90 天）+ `Peak` 漲幅基準
 - `.github/workflows/collect.yml`：GitHub Actions 每小時收集（免付費 Cron）
-- Vercel 部署：設 `DATABASE_URL`（Postgres，如 Neon/Supabase）、`HF_TOKEN`、`CRON_SECRET`
+- `scripts/collect.mjs`：收集 + 漲幅偵測，超閾值經 `DISCORD_WEBHOOK_URL` 推播
+- Vercel 部署：設 `DATABASE_URL`、`DIRECT_URL`、`HF_TOKEN`（`DISCORD_WEBHOOK_URL` 可選）
 
 ## 推上 GitHub
 

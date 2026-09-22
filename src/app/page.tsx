@@ -33,7 +33,9 @@ export default async function Page({
 }: {
   searchParams: { kind?: string; sort?: string };
 }) {
-  const kind = searchParams.kind ?? "model";
+  const kind = (["model", "dataset", "space"] as const).includes(searchParams.kind as any)
+    ? searchParams.kind!
+    : "model";
   const sort = SORTS.some((s) => s.key === searchParams.sort) ? searchParams.sort! : "trendingScore";
   const sortLabel = SORTS.find((s) => s.key === sort)!.label;
   const { rows, live } = await getLatest(kind, sort);

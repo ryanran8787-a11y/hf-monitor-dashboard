@@ -3,10 +3,12 @@ import { db } from "@/lib/db";
 import { fetchList } from "@/lib/hf";
 
 // POST /api/cron/collect  (Header: x-cron-secret)
-// 也可本機跑 node scripts/collect.mjs；此 route 給 Vercel Cron / GitHub Actions 呼叫。
+// 手動觸發收集用。預設關閉：沒設 CRON_SECRET 就回 503，避免被陌生人刷爆 HF 配額和 DB。
 export async function POST(req: Request) {
+  if (!process.env.CRON_SECRET)
+    return NextResponse.json({ error: "collect disabled (CRON_SECRET not set)" }, { status: 503 });
   const secret = req.headers.get("x-cron-secret");
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET)
+  if (secret !== process.env.CRON_SECRET)
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const kinds = ["model", "dataset", "space"] as const;
