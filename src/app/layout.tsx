@@ -13,7 +13,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="border-b border-zinc-200 bg-white/80 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
             <a href="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-zinc-900 text-sm text-white">▲</span>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-zinc-900">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <rect x="2" y="7" width="2.5" height="5" rx="0.8" fill="white" opacity="0.65" />
+                  <rect x="5.75" y="4" width="2.5" height="8" rx="0.8" fill="white" opacity="0.85" />
+                  <rect x="9.5" y="2" width="2.5" height="10" rx="0.8" fill="white" />
+                </svg>
+              </span>
               HF Monitor
             </a>
             <nav className="flex items-center gap-5 text-sm text-zinc-500">

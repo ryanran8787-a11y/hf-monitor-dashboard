@@ -105,7 +105,7 @@ export default async function Page({
                 <td className="text-right tabular-nums">{r.likes?.toLocaleString?.() ?? r.likes}</td>
                 <td className="text-right tabular-nums">{r.downloads?.toLocaleString?.() ?? r.downloads ?? "-"}</td>
                 <td><span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">{r.task ?? "-"}</span></td>
-                <td className="muted tabular-nums">{r.lastModified?.slice(0, 10) ?? "-"}</td>
+                <td className="muted whitespace-nowrap tabular-nums">{r.lastModified?.slice(0, 10) ?? "-"}</td>
               </tr>
             ))}
           </tbody>
