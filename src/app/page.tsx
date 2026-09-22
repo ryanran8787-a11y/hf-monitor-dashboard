@@ -4,13 +4,24 @@ import TrendChart from "@/components/TrendChart";
 
 export const revalidate = 600;
 
-async function getLatest(kind: string) {
-  // 先讀 DB 快照，沒有就即時打 HF API（首屏不空白）
+const SORTS = [
+  { key: "trendingScore", label: "🔥 熱門" },
+  { key: "likes", label: "👍 Likes" },
+  { key: "downloads", label: "⬇ 下載" },
+  { key: "lastModified", label: "🆕 新動態" },
+] as const;
+
+async function getLatest(kind: string, sort: string) {
+  // 先讀 DB 快照（按 kind + sortBy 精確過濾），沒有就即時打 HF API
   const rows = await db.snapshot
-    .findMany({ where: { kind }, orderBy: [{ createdAt: "desc" }, { rank: "asc" }], take: 50 })
+    .findMany({
+      where: { kind, sortBy: sort },
+      orderBy: [{ createdAt: "desc" }, { rank: "asc" }],
+      take: 50,
+    })
     .catch(() => []);
   if (rows.length > 0) return { rows, live: false };
-  const items = await fetchList(kind as any, { limit: 50 }).catch(() => []);
+  const items = await fetchList(kind as any, { sort: sort as any, limit: 50 }).catch(() => []);
   return {
     rows: items.map((x, i) => ({ ...x, hfId: x.id, rank: i + 1, createdAt: new Date() })),
     live: true,
@@ -23,18 +34,18 @@ export default async function Page({
   searchParams: { kind?: string; sort?: string };
 }) {
   const kind = searchParams.kind ?? "model";
-  const { rows, live } = await getLatest(kind);
-  const history = await db.metricHistory
-    .findMany({ orderBy: { createdAt: "asc" }, take: 500 })
-    .catch(() => []);
+  const sort = SORTS.some((s) => s.key === searchParams.sort) ? searchParams.sort! : "trendingScore";
+  const sortLabel = SORTS.find((s) => s.key === sort)!.label;
+  const { rows, live } = await getLatest(kind, sort);
+  const metricKey = sort === "downloads" ? "downloads" : "likes";
 
   return (
     <main className="grid gap-4">
-      <div className="card flex flex-wrap items-center gap-3">
+      <div className="card flex flex-wrap items-center gap-2">
         {(["model", "dataset", "space"] as const).map((k) => (
           <a
             key={k}
-            href={`/?kind=${k}`}
+            href={`/?kind=${k}&sort=${sort}`}
             className={`rounded-full px-4 py-1 text-sm border ${
               kind === k ? "bg-sky-500 text-white border-sky-500" : "border-zinc-700"
             }`}
@@ -42,7 +53,19 @@ export default async function Page({
             {k}s
           </a>
         ))}
-        <span className="muted ml-auto">{live ? "● 即時 HF API" : "● DB 快照"} · kind={kind}</span>
+        <span className="mx-1 text-zinc-700">|</span>
+        {SORTS.map((s) => (
+          <a
+            key={s.key}
+            href={`/?kind=${kind}&sort=${s.key}`}
+            className={`rounded-full px-4 py-1 text-sm border ${
+              sort === s.key ? "bg-amber-500 text-white border-amber-500" : "border-zinc-700"
+            }`}
+          >
+            {s.label}
+          </a>
+        ))}
+        <span className="muted ml-auto">{live ? "● 即時 HF API" : "● DB 快照"} · {kind}/{sort}</span>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -51,22 +74,28 @@ export default async function Page({
           <div className="text-3xl font-bold">{rows.length}</div>
         </div>
         <div className="card">
-          <div className="muted">Top 1</div>
-          <div className="truncate font-mono text-lg">{(rows[0] as any)?.hfId ?? "-"}</div>
+          <div className="muted">Top 1 · {sortLabel}</div>
+          <div className="truncate font-mono text-lg" title={(rows[0] as any)?.hfId ?? ""}>
+            {(rows[0] as any)?.hfId ?? "-"}
+          </div>
         </div>
         <div className="card">
-          <div className="muted">歷史點數</div>
-          <div className="text-3xl font-bold">{history.length}</div>
+          <div className="muted">更新時間</div>
+          <div className="text-lg">
+            {(rows[0] as any)?.createdAt ? new Date((rows[0] as any).createdAt).toLocaleString("zh-TW", { hour12: false }) : "-"}
+          </div>
         </div>
       </div>
 
       <div className="card">
-        <h2 className="mb-2 font-semibold">Likes Top 10 趨勢</h2>
-        <TrendChart data={rows.slice(0, 10).map((r: any) => ({ name: r.hfId, likes: r.likes ?? 0 }))} />
+        <h2 className="mb-2 font-semibold">{sortLabel} Top 10</h2>
+        <TrendChart
+          data={rows.slice(0, 10).map((r: any) => ({ name: r.hfId, value: r[metricKey] ?? 0 }))}
+        />
       </div>
 
       <div className="card overflow-x-auto">
-        <h2 className="mb-2 font-semibold">Trending {kind}s</h2>
+        <h2 className="mb-2 font-semibold">{sortLabel} {kind}s Top 50</h2>
         <table className="data">
           <thead>
             <tr><th>#</th><th>ID</th><th>Likes</th><th>Downloads</th><th>Task</th><th>Updated</th></tr>
@@ -76,12 +105,12 @@ export default async function Page({
               <tr key={`${r.hfId}-${i}`}>
                 <td>{r.rank ?? i + 1}</td>
                 <td className="font-mono">
-                  <a className="link" href={`https://huggingface.co/${kind === "model" ? "" : kind + "s/"}${r.hfId}`} target="_blank">
+                  <a className="link" href={`/model/${r.hfId}?kind=${kind}`}>
                     {r.hfId}
                   </a>
                 </td>
-                <td>{r.likes}</td>
-                <td>{r.downloads ?? "-"}</td>
+                <td>{r.likes?.toLocaleString?.() ?? r.likes}</td>
+                <td>{r.downloads?.toLocaleString?.() ?? r.downloads ?? "-"}</td>
                 <td>{r.task ?? "-"}</td>
                 <td className="muted">{r.lastModified?.slice(0, 10) ?? "-"}</td>
               </tr>

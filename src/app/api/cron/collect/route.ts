@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const kinds = ["model", "dataset", "space"] as const;
   let total = 0;
   for (const kind of kinds) {
-    for (const sort of ["likes", "downloads"] as const) {
+    for (const sort of ["likes", "downloads", "trendingScore", "lastModified"] as const) {
       try {
         const items = await fetchList(kind, { sort, limit: 100 });
         await db.snapshot.deleteMany({ where: { kind, sortBy: sort } }).catch(() => {});

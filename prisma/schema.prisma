@@ -38,3 +38,15 @@ model MetricHistory {
 
   @@index([kind, hfId, createdAt])
 }
+
+// 漲幅告警用：每個 repo 見過的最大值。突破峰值 + 超過閾值才通知。
+model Peak {
+  id        Int      @id @default(autoincrement())
+  kind      String
+  hfId      String
+  likes     Int      @default(0)
+  downloads Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([kind, hfId])
+}
