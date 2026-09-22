@@ -28,15 +28,19 @@ model Snapshot {
 }
 
 // 單一 repo 的歷史曲線（Top N + 使用者追蹤才會持續寫）
+// rank/sortBy：該筆是從哪個榜單第幾名抓到的，給詳情頁畫排名曲線用（舊資料此二欄為空）
 model MetricHistory {
   id        Int      @id @default(autoincrement())
   kind      String
   hfId      String
   likes     Int
   downloads Int
+  rank      Int?
+  sortBy    String   @default("likes")
   createdAt DateTime @default(now())
 
   @@index([kind, hfId, createdAt])
+  @@index([kind, hfId, sortBy, createdAt])
 }
 
 // 漲幅告警用：每個 repo 見過的最大值。突破峰值 + 超過閾值才通知。

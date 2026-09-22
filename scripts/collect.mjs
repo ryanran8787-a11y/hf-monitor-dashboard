@@ -74,24 +74,24 @@ const rounds = (await Promise.all(jobs)).filter(Boolean);
 const total = rounds.reduce((n, r) => n + r.items.length, 0);
 console.log(`phase1 fetch+snapshots: ${rounds.length}/12 rounds, total=${total}, ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
-// 去重：同一 repo 只比對一次峰值
+// 去重：同一 repo 只比對一次峰值；歷史曲線則按榜單分別保留（含 rank/sortBy）
 const seen = new Map();
+const histRows = [];
 for (const r of rounds) {
-  for (const x of r.items.slice(0, TOP_N)) {
+  r.items.slice(0, TOP_N).forEach((x, i) => {
     const hfId = x.id ?? x.name;
+    histRows.push({ kind: r.kind, hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0, rank: i + 1, sortBy: r.sort });
     const key = `${r.kind}/${hfId}`;
     if (!seen.has(key)) {
       seen.set(key, { kind: r.kind, hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0 });
     }
-  }
+  });
 }
 
 // ---- Phase 2：歷史曲線一次批量寫 ----
 const cur = [...seen.values()];
-await db.metricHistory.createMany({
-  data: cur.map((c) => ({ kind: c.kind, hfId: c.hfId, likes: c.likes, downloads: c.downloads })),
-}).catch((e) => console.error("history createMany failed", e.message));
-console.log(`phase2 history: ${cur.length} rows, ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+await db.metricHistory.createMany({ data: histRows }).catch((e) => console.error("history createMany failed", e.message));
+console.log(`phase2 history: ${histRows.length} rows, ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
 // ---- Phase 3：峰值一次查出、差異一次 transaction 寫回 ----
 const prevRows = await db.peak
