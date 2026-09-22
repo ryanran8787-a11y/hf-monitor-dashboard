@@ -2,7 +2,7 @@ name: collect-hf
 
 on:
   schedule:
-    - cron: "17 * * * *"  # 每小時
+    - cron: "7 * * * *"  # 每小時 07 分（曾用 17 分但 scheduler 未觸發，換分鐘數重新註冊）
   workflow_dispatch:
 
 jobs:
