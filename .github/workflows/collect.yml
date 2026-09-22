@@ -5,6 +5,11 @@ on:
     - cron: "7 * * * *"  # 每小時 07 分（曾用 17 分但 scheduler 未觸發，換分鐘數重新註冊）
   workflow_dispatch:
 
+# 萬一 GitHub scheduler 醒來 + 外部 cron 同時觸發，排隊不重疊
+concurrency:
+  group: collect-hf
+  cancel-in-progress: false
+
 jobs:
   collect:
     runs-on: ubuntu-latest
