@@ -61,7 +61,7 @@ export default async function WatchPage() {
         <div className="card muted">還沒追蹤任何模型，用上面搜尋框加一台。</div>
       ) : (
         <div className="card overflow-x-auto !p-0">
-          <table className="data">
+          <table className="data min-w-[560px]">
             <thead>
               <tr><th>ID</th><th className="text-right">Likes</th><th className="text-right">24h 變化</th><th>走勢</th><th>開始追蹤</th><th></th></tr>
             </thead>

@@ -199,7 +199,7 @@ export default async function Page({
 
       <div className="card overflow-x-auto !p-0">
         <h2 className="section-title px-5 pb-1 pt-5">{sortLabel} {kind}s Top 50</h2>
-        <table className="data">
+        <table className="data min-w-[640px]">
           <thead>
             <tr><th className="w-10">#</th><th>ID</th><th className="text-right">Likes</th><th className="text-right">Downloads</th><th>Task</th><th>Updated</th></tr>
           </thead>

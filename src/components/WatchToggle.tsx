@@ -7,13 +7,16 @@ export default function WatchToggle({ kind, hfId, initial }: { kind: string; hfI
   const router = useRouter();
   const [on, setOn] = useState(initial);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   async function toggle() {
     setBusy(true);
+    setFailed(false);
     try {
       if (on) {
         const r = await fetch(`/api/watch?kind=${kind}&hfId=${encodeURIComponent(hfId)}`, { method: "DELETE" });
         if (r.ok) setOn(false);
+        else setFailed(true);
       } else {
         const r = await fetch("/api/watch", {
           method: "POST",
@@ -24,20 +27,23 @@ export default function WatchToggle({ kind, hfId, initial }: { kind: string; hfI
       }
       router.refresh();
     } catch {
-      // 靜默失敗，下次再按
+      setFailed(true);
     }
     setBusy(false);
   }
 
   return (
-    <button
-      type="button"
-      disabled={busy}
-      onClick={toggle}
-      className={on ? "pill-active" : "pill"}
-      title={on ? "取消追蹤" : "追蹤此模型（每輪收集養曲線）"}
-    >
-      {on ? "★ 追蹤中" : "☆ 追蹤"}
-    </button>
+    <span className="inline-flex items-center gap-2">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={toggle}
+        className={on ? "pill-active" : "pill"}
+        title={on ? "取消追蹤" : "追蹤此模型（每輪收集養曲線）"}
+      >
+        {on ? "★ 追蹤中" : "☆ 追蹤"}
+      </button>
+      {failed && <span className="text-xs text-rose-600 dark:text-rose-400">操作失敗，再試一次</span>}
+    </span>
   );
 }

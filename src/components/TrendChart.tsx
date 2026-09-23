@@ -10,7 +10,7 @@ export default function TrendChart({ data }: { data: { name: string; value: numb
     <div style={{ width: "100%", height: 260 }}>
       <ResponsiveContainer>
         <BarChart data={short}>
-          <XAxis dataKey="name" tick={{ fontSize: 11, fill: c.tick }} interval={0} angle={-20} height={60} />
+          <XAxis dataKey="name" tick={{ fontSize: 11, fill: c.tick }} interval="preserveStartEnd" angle={-20} height={60} />
           <YAxis tick={{ fontSize: 11, fill: c.tick }} width={60} tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)} />
           <Tooltip
             contentStyle={{ background: c.tipBg, border: `1px solid ${c.tipBd}`, borderRadius: 8, fontSize: 12 }}

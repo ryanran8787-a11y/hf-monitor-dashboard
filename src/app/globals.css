@@ -15,7 +15,7 @@ a.link { @apply text-blue-600 hover:underline; }
 .pill { @apply rounded-full px-4 py-1 text-sm border border-zinc-200 text-zinc-600 bg-white transition-colors hover:border-zinc-400; }
 .pill-active { @apply rounded-full px-4 py-1 text-sm border border-zinc-900 bg-zinc-900 text-white; }
 .section-title { @apply text-sm font-semibold tracking-tight; }
-.stat-num { @apply text-3xl font-semibold tracking-tight tabular-nums; }
+.stat-num { @apply text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums; }
 
 /* 深色模式：html.dark 由 header 切換鈕控制，localStorage 記憶，預設跟系統 */
 .dark { color-scheme: dark; }

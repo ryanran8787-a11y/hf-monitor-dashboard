@@ -89,7 +89,7 @@ export default async function ModelPage({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <div className="card"><div className="muted">Likes</div><div className="stat-num mt-1">{likes?.toLocaleString?.() ?? "-"}</div></div>
         <div className="card"><div className="muted">Downloads</div><div className="stat-num mt-1">{downloads?.toLocaleString?.() ?? "-"}</div></div>
         <div className="card">

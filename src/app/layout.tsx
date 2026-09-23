@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
         <header className="border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            <a href="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+            <a href="/" className="flex shrink-0 items-center gap-2 text-[15px] font-semibold tracking-tight">
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-zinc-900 dark:border dark:border-zinc-700">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                   <rect x="2" y="7" width="2.5" height="5" rx="0.8" fill="white" opacity="0.65" />
@@ -29,9 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <rect x="9.5" y="2" width="2.5" height="10" rx="0.8" fill="white" />
                 </svg>
               </span>
-              HF Monitor
+              <span className="hidden min-[380px]:inline">HF Monitor</span>
             </a>
-            <nav className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
+            <nav className="flex items-center gap-2.5 text-[13px] text-zinc-500 sm:gap-4 sm:text-sm dark:text-zinc-400">
               <a className="hover:text-zinc-900 dark:hover:text-white" href="/">總覽</a>
               <a className="hover:text-zinc-900 dark:hover:text-white" href="/compare">雙雄PK</a>
               <a className="hover:text-zinc-900 dark:hover:text-white" href="/watch">追蹤</a>
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </div>
         </header>
-        <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="mx-auto max-w-6xl px-4 py-5 sm:py-8">
           {children}
           <footer className="muted mt-10 border-t border-zinc-200 pt-4 dark:border-zinc-800">資料來源: huggingface.co API · 每小時更新</footer>
         </div>

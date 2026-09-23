@@ -12,7 +12,7 @@ export default function TaskBars({ items, totalLikes }: { items: TaskSlice[]; to
       {items.map((s) => {
         const pct = (s.likes / totalLikes) * 100;
         return (
-          <div key={s.task} className="grid grid-cols-[150px_1fr_auto] items-center gap-3">
+          <div key={s.task} className="grid grid-cols-[104px_1fr_auto] items-center gap-2 sm:grid-cols-[150px_1fr_auto] sm:gap-3">
             <span className="truncate font-mono text-[13px]" title={s.task}>
               {s.task}
             </span>

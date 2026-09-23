@@ -14,14 +14,17 @@ export default function WatchAdder() {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
   const [busy, setBusy] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
     const s = q.trim();
     if (s.length < 2) {
       setHits([]);
+      setSearching(false);
       return;
     }
+    setSearching(true);
     const t = setTimeout(async () => {
       try {
         const r = await fetch(`/api/hf-search?kind=${kind}&q=${encodeURIComponent(s)}`);
@@ -30,6 +33,7 @@ export default function WatchAdder() {
       } catch {
         setHits([]);
       }
+      setSearching(false);
     }, 300);
     return () => clearTimeout(t);
   }, [q, kind]);
@@ -93,6 +97,7 @@ export default function WatchAdder() {
           ))}
         </div>
       )}
+      {searching && hits.length === 0 && <p className="muted mt-1 text-xs">搜尋中…</p>}
       {msg && <p className="muted mt-1 text-xs">{msg}</p>}
     </div>
   );
