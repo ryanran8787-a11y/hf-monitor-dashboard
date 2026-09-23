@@ -74,3 +74,10 @@ model DigestLog {
   date      String   @id // yyyy-MM-dd（Asia/Taipei）
   createdAt DateTime @default(now())
 }
+
+// 看門狗節流：斷收告警發過一次後，N 小時內不再重發（避免每小時洗版）
+model WatchdogState {
+  key         String   @id @default("collect-freshness")
+  lastAlertAt DateTime?
+  updatedAt   DateTime @updatedAt
+}

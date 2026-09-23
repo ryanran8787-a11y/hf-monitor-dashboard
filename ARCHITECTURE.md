@@ -24,6 +24,7 @@
 6. `/watch` 追蹤清單（無登入，全站一份，上限 50）：`WatchAdder` 即時搜 HF（`/api/hf-search`）→ `POST /api/watch`；collector Phase 5 每輪多抓一次（`sortBy="watch"`，失敗跳過）；`/watch` 現價＋24h 變化＋sparkline；詳情頁 `WatchToggle` 開關；取消只停更、歷史保留
 7. 日報：collector Phase 4，台北 08:00（UTC 00:00）用 `DigestLog` 去重搶發，模板組裝（吸粉前3＋新進榜＋掉榜），走舊 Discord webhook
 8. 深色模式：Tailwind `class` 模式＋`globals.css` 集中覆蓋（`.card/.pill/.muted/table/link`）；`ThemeProvider`（`src/lib/theme.tsx`）管狀態＋localStorage＋跟系統；layout 內嵌 paint 前腳本防閃白；五張圖表經 `chartTheme()` 換裝潢色，系列色兩邊通用
+9. 看門狗：`watchdog.yml` 每小時 :37 查最新 `MetricHistory`，超 `WATCHDOG_MAX_AGE_HOURS`（預設 3h）沒新資料就 Discord 告警；`WatchdogState` 節流，`WATCHDOG_RESEND_HOURS`（預設 12h）內不重發；沒設 webhook 則 job 直接失敗（靠 Actions 通知兜底）
 4. `MetricHistory` 只留 90 天（collector 每輪順手清）
 
 ## 已知限制

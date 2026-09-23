@@ -1,0 +1,30 @@
+name: watchdog
+
+on:
+  schedule:
+    - cron: "37 * * * *" # 每小時 37 分，跟 collect（:07）錯開，避免同時搶 DB
+  workflow_dispatch: # 手動驗證用
+
+# 跑很快（一次查詢），但還是排隊不重疊
+concurrency:
+  group: watchdog
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npx prisma db push # WatchdogState 表結構同步（無資料變更，安全）
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      - run: node scripts/watchdog.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
