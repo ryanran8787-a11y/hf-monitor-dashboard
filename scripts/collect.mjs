@@ -193,12 +193,17 @@ if (taipeiHour === 8 && DISCORD) {
       .sort((x, y) => y.grow - x.grow)
       .slice(0, 3);
     const lines = [`📮 HF 熱榜日報 ${dateStr.slice(5).replace("-", "/")}（models）`];
-    if (growers.length > 0) {
-      lines.push("🔥 吸粉最快");
-      growers.forEach((g, i) => lines.push(`${i + 1}. ${g.hfId} +${g.grow.toLocaleString()}（${g.from.toLocaleString()}→${g.to.toLocaleString()}）`));
+    if (curRows.length === 0) {
+      // 整晚沒收到資料：不發空報、不跳過，發一封誠實的異常報（佔位照吃，明天繼續）
+      lines.push(`⚠️ 今晨抓取異常：近 2 小時沒有收到熱門榜資料（可能是 HF API 或收集中斷），今日榜單暫缺。`);
+    } else {
+      if (growers.length > 0) {
+        lines.push("🔥 吸粉最快");
+        growers.forEach((g, i) => lines.push(`${i + 1}. ${g.hfId} +${g.grow.toLocaleString()}（${g.from.toLocaleString()}→${g.to.toLocaleString()}）`));
+      }
+      if (newOnes.length > 0) lines.push(`🆕 新進榜：${newOnes.slice(0, 5).join("、")}${newOnes.length > 5 ? ` 等 ${newOnes.length} 個` : ""}`);
+      if (dropped.length > 0) lines.push(`📉 掉出榜：${dropped.slice(0, 5).join("、")}${dropped.length > 5 ? ` 等 ${dropped.length} 個` : ""}`);
     }
-    if (newOnes.length > 0) lines.push(`🆕 新進榜：${newOnes.slice(0, 5).join("、")}${newOnes.length > 5 ? ` 等 ${newOnes.length} 個` : ""}`);
-    if (dropped.length > 0) lines.push(`📉 掉出榜：${dropped.slice(0, 5).join("、")}${dropped.length > 5 ? ` 等 ${dropped.length} 個` : ""}`);
     await discord(lines.join("\n")).then(async (sent) => {
       if (sent) {
         console.log(`digest sent for ${dateStr}`);

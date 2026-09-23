@@ -13,14 +13,13 @@ function fmtT(d: Date) {
 
 type H = { createdAt: Date; likes: number; downloads: number; rank: number | null; sortBy: string };
 
-// 同一分鐘多榜單會重複：likes 榜優先，否則取第一筆
+// 同一分鐘多榜單會重複：likes 榜優先，否則取第一筆；同分鐘多筆留最新的（hist 按時間升序，後寫覆蓋）
 function pickAbs(hist: H[]) {
   const liked = hist.filter((h) => h.sortBy === "likes");
   const pool = liked.length > 0 ? liked : hist;
   const m = new Map<string, H>();
   for (const h of pool) {
-    const k = fmtT(h.createdAt);
-    if (!m.has(k)) m.set(k, h);
+    m.set(fmtT(h.createdAt), h);
   }
   return m;
 }
@@ -85,7 +84,7 @@ export default async function ComparePage({
     for (const r of h as H[]) {
       if (r.sortBy !== "trendingScore" || r.rank == null) continue;
       const k = fmtT(r.createdAt);
-      if (!m.has(k)) m.set(k, r.rank);
+      m.set(k, r.rank); // 同分鐘重跑留最新（hist 按時間升序）
       if (!rankTimes.has(k)) rankTimes.set(k, r.createdAt.getTime());
     }
   }

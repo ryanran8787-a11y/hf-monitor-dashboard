@@ -48,6 +48,11 @@ export default async function Page({
   const sortLabel = SORTS.find((s) => s.key === sort)!.label;
   const { rows, live } = await getLatest(kind, sort);
   const metricKey = sort === "downloads" ? "downloads" : "likes";
+  // 快照陳舊度：抓取失敗時舊快照會留著，不能當新鮮的畫——超 2 小時就掛警告
+  const snapAgeH =
+    !live && rows.length > 0
+      ? (Date.now() - new Date((rows[0] as any).createdAt).getTime()) / 3600000
+      : 0;
 
   // ---- 流派分析（只做 model：datasets/spaces 的 task 幾乎全空）----
   let taskSlices: TaskSlice[] = [];
@@ -150,6 +155,11 @@ export default async function Page({
           <span className={`inline-block h-1.5 w-1.5 rounded-full ${live ? "bg-amber-500" : "bg-emerald-500"}`} />
           {live ? "即時 HF API" : "DB 快照"} · {kind} / {sort}
         </span>
+        {!live && snapAgeH > 2 && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+            快照已 {Math.floor(snapAgeH)} 小時未更新，收集可能中斷
+          </span>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
