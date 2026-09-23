@@ -1,5 +1,7 @@
 # HF Monitor — Hugging Face 全站熱門儀表盤
 
+🌐 線上體驗：https://hf-monitor-dashboard.vercel.app
+
 每小時追蹤 Hugging Face 全站熱門動態：Models / Datasets / Spaces 三大類 × 熱門 / Likes / 下載 / 新動態四種榜單，共 12 輪。附歷史曲線、雙雄 PK、流派分析、追蹤清單與 Discord 漲幅告警。
 
 ## 功能
