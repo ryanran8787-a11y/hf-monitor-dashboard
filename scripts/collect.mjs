@@ -149,6 +149,72 @@ if (alerts.length > 0) {
   console.log(`alerts: ${alerts.length}`);
   await discord(`🤗 HF Monitor 漲幅告警\n${alerts.join("\n")}`);
 }
+// ---- Phase 4：每日摘要（台北 08:00，一天一次，用 DigestLog 去重；08 點內多輪只搶到一封）----
+const taipeiHour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Taipei", hour: "numeric", hour12: false }).format(new Date()));
+if (taipeiHour === 8 && DISCORD) {
+  const dateStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const fmtT = (d) => d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  try {
+    await db.digestLog.create({ data: { date: dateStr } }); // 搶到 = 今天第一個，直接發；搶輸（P2002）跳過
+    const latest = await db.metricHistory.findMany({
+      where: { kind: "model", sortBy: "trendingScore", createdAt: { gte: new Date(Date.now() - 2 * 3600 * 1000) } },
+      orderBy: [{ createdAt: "desc" }, { rank: "asc" }],
+      take: 60,
+    });
+    let curKey = "";
+    if (latest.length > 0) curKey = fmtT(latest.reduce((x, y) => (x.createdAt > y.createdAt ? x : y)).createdAt);
+    const curRows = latest.filter((h) => fmtT(h.createdAt) === curKey).sort((x, y) => (x.rank ?? 99) - (y.rank ?? 99)).slice(0, 20);
+    const oldAll = await db.metricHistory.findMany({
+      where: { kind: "model", sortBy: "trendingScore", createdAt: { lte: new Date(Date.now() - 24 * 3600 * 1000) } },
+      orderBy: { createdAt: "desc" },
+      take: 60,
+    });
+    let oldKey = "";
+    if (oldAll.length > 0) oldKey = fmtT(oldAll.reduce((x, y) => (x.createdAt > y.createdAt ? x : y)).createdAt);
+    const oldRows = oldAll.filter((h) => fmtT(h.createdAt) === oldKey);
+    const curMap = new Map(curRows.map((h) => [h.hfId, h]));
+    const oldMap = new Map(oldRows.map((h) => [h.hfId, h]));
+    const newOnes = curRows.map((h) => h.hfId).filter((id) => !oldMap.has(id));
+    const dropped = oldRows.map((h) => h.hfId).filter((id) => !curMap.has(id));
+    const growers = curRows
+      .filter((h) => oldMap.has(h.hfId))
+      .map((h) => ({ hfId: h.hfId, grow: h.likes - oldMap.get(h.hfId).likes, from: oldMap.get(h.hfId).likes, to: h.likes }))
+      .sort((x, y) => y.grow - x.grow)
+      .slice(0, 3);
+    const lines = [`📮 HF 熱榜日報 ${dateStr.slice(5).replace("-", "/")}（models）`];
+    if (growers.length > 0) {
+      lines.push("🔥 吸粉最快");
+      growers.forEach((g, i) => lines.push(`${i + 1}. ${g.hfId} +${g.grow.toLocaleString()}（${g.from.toLocaleString()}→${g.to.toLocaleString()}）`));
+    }
+    if (newOnes.length > 0) lines.push(`🆕 新進榜：${newOnes.slice(0, 5).join("、")}${newOnes.length > 5 ? ` 等 ${newOnes.length} 個` : ""}`);
+    if (dropped.length > 0) lines.push(`📉 掉出榜：${dropped.slice(0, 5).join("、")}${dropped.length > 5 ? ` 等 ${dropped.length} 個` : ""}`);
+    await discord(lines.join("\n"));
+    console.log(`digest sent for ${dateStr}`);
+  } catch (e) {
+    if (e?.code !== "P2002") console.error("digest failed", e.message);
+  }
+}
+
+// ---- Phase 5：watch 續養（冷門追蹤模型每輪抓一次，一台一次，失敗跳過；上榜模型本來就有不重複算）----
+const watched = await db.watch.findMany({ take: 50 }).catch(() => []);
+if (watched.length > 0) {
+  const seg = (k) => (k === "model" ? "models" : k === "dataset" ? "datasets" : "spaces");
+  const wrows = [];
+  await Promise.all(
+    watched.map(async (w) => {
+      try {
+        const r = await fetch(`${API}/${seg(w.kind)}/${w.hfId}`, { headers });
+        if (!r.ok) return;
+        const x = await r.json();
+        wrows.push({ kind: w.kind, hfId: w.hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0, rank: null, sortBy: "watch", task: x.pipeline_tag ?? null });
+      } catch {}
+    })
+  );
+  if (wrows.length > 0) {
+    await db.metricHistory.createMany({ data: wrows }).catch((e) => console.error("watch history failed", e.message));
+  }
+  console.log(`phase5 watch: ${wrows.length}/${watched.length}`);
+}
 // 歷史曲線只留 90 天，避免免費用量爆炸
 const cutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000);
 const pruned = await db.metricHistory.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch(() => ({ count: 0 }));

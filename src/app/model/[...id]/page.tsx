@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { fetchOne } from "@/lib/hf";
 import HistoryLine from "@/components/HistoryLine";
 import RankChart from "@/components/RankChart";
+import WatchToggle from "@/components/WatchToggle";
 
 export const revalidate = 600;
 
@@ -45,6 +46,7 @@ export default async function ModelPage({
 
   const likes = live?.likes ?? hist.at(-1)?.likes ?? null;
   const downloads = live?.downloads ?? hist.at(-1)?.downloads ?? null;
+  const watched = await db.watch.findUnique({ where: { kind_hfId: { kind, hfId } } }).catch(() => null);
 
   // ---- 絕對值曲線：同時間多榜單會重複，取 likes 榜優先，否則任一 ----
   const absPool = hist.filter((h) => h.sortBy === "likes");
@@ -83,6 +85,7 @@ export default async function ModelPage({
           {live?.pipeline_tag && <span>task: {live.pipeline_tag}</span>}
           {live?.library_name && <span>lib: {live.library_name}</span>}
           <a className="link" href={hfUrl(kind, hfId)} target="_blank">HF Hub ↗</a>
+          <WatchToggle kind={kind} hfId={hfId} initial={!!watched} />
         </div>
       </div>
 

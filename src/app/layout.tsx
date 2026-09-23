@@ -25,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="flex items-center gap-5 text-sm text-zinc-500">
               <a className="hover:text-zinc-900" href="/">總覽</a>
               <a className="hover:text-zinc-900" href="/compare">雙雄PK</a>
+              <a className="hover:text-zinc-900" href="/watch">追蹤</a>
               <a className="hover:text-zinc-900" href="https://huggingface.co/models" target="_blank">HF Hub ↗</a>
             </nav>
           </div>

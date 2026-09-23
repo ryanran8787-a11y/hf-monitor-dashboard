@@ -55,3 +55,20 @@ model Peak {
 
   @@unique([kind, hfId])
 }
+
+// 使用者追蹤清單（單人專案，全站一份無登入）：collector 每輪多抓這些，冷門模型也有曲線
+model Watch {
+  id        Int      @id @default(autoincrement())
+  kind      String
+  hfId      String
+  createdAt DateTime @default(now())
+
+  @@unique([kind, hfId])
+  @@index([createdAt])
+}
+
+// 日報去重：同一天（台北日期）只發一次
+model DigestLog {
+  date      String   @id // yyyy-MM-dd（Asia/Taipei）
+  createdAt DateTime @default(now())
+}
