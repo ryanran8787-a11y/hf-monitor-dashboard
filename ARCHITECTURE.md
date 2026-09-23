@@ -20,6 +20,7 @@
 2. `/` 先讀 `Snapshot`（按 kind + sortBy），無資料 fallback 即時 HF API
 3. `/model/[...id]` 詳情：HF 單 repo API + `MetricHistory` 曲線（2 筆以上才畫線）
 4. `/compare?kind=&a=&b=` 雙雄 PK：`MetricHistory.groupBy` 取候選（Top300 by likes）+ 兩條歷史合併時間軸（likes/downloads/熱門排名三圖＋判決卡）；選模型框是共用 `ModelPicker`，watchlist 可直接复用
+5. `/` 流派分析（僅 model）：版圖吃當期熱門榜 Top50 快照按 `task` 分組；趨勢吃 `MetricHistory`（`sortBy=trendingScore`，每輪各 task likes 佔比堆疊，Top5＋其他；`task` 欄 2026-09-23 起才寫，舊輪跳過）
 4. `MetricHistory` 只留 90 天（collector 每輪順手清）
 
 ## 已知限制

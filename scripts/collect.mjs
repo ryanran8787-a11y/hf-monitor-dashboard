@@ -80,7 +80,7 @@ const histRows = [];
 for (const r of rounds) {
   r.items.slice(0, TOP_N).forEach((x, i) => {
     const hfId = x.id ?? x.name;
-    histRows.push({ kind: r.kind, hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0, rank: i + 1, sortBy: r.sort });
+    histRows.push({ kind: r.kind, hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0, rank: i + 1, sortBy: r.sort, task: x.pipeline_tag ?? null });
     const key = `${r.kind}/${hfId}`;
     if (!seen.has(key)) {
       seen.set(key, { kind: r.kind, hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0 });

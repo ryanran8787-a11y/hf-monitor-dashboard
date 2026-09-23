@@ -1,8 +1,16 @@
 import { db } from "@/lib/db";
 import { fetchList } from "@/lib/hf";
 import TrendChart from "@/components/TrendChart";
+import TaskBars, { TaskSlice } from "@/components/TaskBars";
+import TaskShareChart, { ShareSeries } from "@/components/TaskShareChart";
 
 export const revalidate = 600;
+
+const TASK_COLORS = ["#0284c7", "#ea580c", "#7c3aed", "#059669", "#e11d48", "#64748b"];
+
+function fmtT(d: Date) {
+  return d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+}
 
 const SORTS = [
   { key: "trendingScore", label: "熱門" },
@@ -40,6 +48,88 @@ export default async function Page({
   const sortLabel = SORTS.find((s) => s.key === sort)!.label;
   const { rows, live } = await getLatest(kind, sort);
   const metricKey = sort === "downloads" ? "downloads" : "likes";
+
+  // ---- 流派分析（只做 model：datasets/spaces 的 task 幾乎全空）----
+  let taskSlices: TaskSlice[] = [];
+  let taskTotalLikes = 0;
+  let shareRows: Record<string, any>[] = [];
+  let shareSeries: ShareSeries[] = [];
+  if (kind === "model") {
+    // 版圖：當期熱門榜 Top50 按 task 分組（快照現成，零額外成本）
+    const snap = await db.snapshot
+      .findMany({
+        where: { kind: "model", sortBy: "trendingScore" },
+        orderBy: [{ createdAt: "desc" }, { rank: "asc" }],
+        take: 50,
+      })
+      .catch(() => []);
+    const byTask = new Map<string, { count: number; likes: number }>();
+    for (const r of snap) {
+      const t = r.task || "未分類";
+      const e = byTask.get(t) || { count: 0, likes: 0 };
+      e.count += 1;
+      e.likes += r.likes ?? 0;
+      byTask.set(t, e);
+    }
+    const all = Array.from(byTask.entries())
+      .map(([task, v]) => ({ task, count: v.count, likes: v.likes }))
+      .sort((x, y) => y.likes - x.likes);
+    taskTotalLikes = all.reduce((n, s) => n + s.likes, 0);
+    const top = all.slice(0, 8);
+    const rest = all.slice(8);
+    taskSlices =
+      rest.length > 0
+        ? top.concat([{ task: "其他", count: rest.reduce((n, s) => n + s.count, 0), likes: rest.reduce((n, s) => n + s.likes, 0) }])
+        : top;
+
+    // 趨勢：每輪各 task 的 likes 佔比（task 欄 2026-09-23 起才寫，舊輪次跳過）
+    const since = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+    const hist = await db.metricHistory
+      .findMany({
+        where: { kind: "model", sortBy: "trendingScore", createdAt: { gte: since } },
+        orderBy: { createdAt: "asc" },
+        take: 5000,
+      })
+      .catch(() => []);
+    const rounds = new Map<string, { time: number; byTask: Map<string, number>; total: number }>();
+    for (const h of hist) {
+      if (!(h as any).task) continue;
+      const k = fmtT(new Date(h.createdAt));
+      let r = rounds.get(k);
+      if (!r) {
+        r = { time: new Date(h.createdAt).getTime(), byTask: new Map(), total: 0 };
+        rounds.set(k, r);
+      }
+      const t = (h as any).task as string;
+      r.byTask.set(t, (r.byTask.get(t) || 0) + (h.likes ?? 0));
+      r.total += h.likes ?? 0;
+    }
+    const taskTotals = new Map<string, number>();
+    for (const r of Array.from(rounds.values())) {
+      for (const [t, v] of Array.from(r.byTask.entries())) taskTotals.set(t, (taskTotals.get(t) || 0) + v);
+    }
+    const topTasks = Array.from(taskTotals.entries())
+      .sort((x, y) => y[1] - x[1])
+      .slice(0, 5)
+      .map(([t]) => t);
+    const keys = ["t0", "t1", "t2", "t3", "t4", "other"];
+    shareSeries = topTasks
+      .map((t, i) => ({ key: keys[i], label: t, color: TASK_COLORS[i] }))
+      .concat([{ key: "other", label: "其他", color: TASK_COLORS[5] }]);
+    shareRows = Array.from(rounds.entries())
+      .sort((x, y) => x[1].time - y[1].time)
+      .map(([t, r]) => {
+        const row: Record<string, any> = { t };
+        let other = 0;
+        for (const [task, v] of Array.from(r.byTask.entries())) {
+          const i = topTasks.indexOf(task);
+          if (i >= 0) row[keys[i]] = r.total > 0 ? (v / r.total) * 100 : 0;
+          else other += v;
+        }
+        row.other = r.total > 0 ? (other / r.total) * 100 : 0;
+        return row;
+      });
+  }
 
   return (
     <main className="grid gap-4">
@@ -86,6 +176,25 @@ export default async function Page({
           data={rows.slice(0, 10).map((r: any) => ({ name: r.hfId, value: r[metricKey] ?? 0 }))}
         />
       </div>
+
+            {kind === "model" && (
+        <div className="card">
+          <h2 className="section-title mb-1">流派版圖（熱門榜 Top50）</h2>
+          <p className="muted mb-3 text-xs">當期各任務流派的席次與 likes 佔比；下圖是佔比隨時間的消長。</p>
+          <TaskBars items={taskSlices} totalLikes={taskTotalLikes} />
+        </div>
+      )}
+
+      {kind === "model" && (
+        <div className="card">
+          <h2 className="section-title mb-3">流派趨勢（近 7 天，台北時間）</h2>
+          {shareRows.length >= 2 ? (
+            <TaskShareChart data={shareRows} series={shareSeries} />
+          ) : (
+            <p className="muted">趨勢累積中（task 欄位剛上線，等下幾輪收集才有線）。版圖是即時的，不受影響。</p>
+          )}
+        </div>
+      )}
 
       <div className="card overflow-x-auto !p-0">
         <h2 className="section-title px-5 pb-1 pt-5">{sortLabel} {kind}s Top 50</h2>
