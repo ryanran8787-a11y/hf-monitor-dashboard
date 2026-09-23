@@ -20,7 +20,7 @@ function hfUrl(kind: string, hfId: string) {
 }
 
 function fmtT(d: Date) {
-  return d.toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  return d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 export default async function ModelPage({
@@ -121,7 +121,7 @@ export default async function ModelPage({
         {rankRows.length >= 2 && series.length > 0 ? (
           <>
             <RankChart data={rankRows} series={series} />
-            <p className="muted mt-1 text-xs">只收錄進榜前 20 的時間點；掉出榜單處會斷線。Y 軸越上名次越高。</p>
+            <p className="muted mt-1 text-xs">時間為台北時間；只收錄進榜前 20 的時間點；掉出榜單處會斷線。Y 軸越上名次越高。</p>
           </>
         ) : (
           <p className="muted">排名數據累積中（新欄位剛上線，等下幾輪收集才有線）。{hist.length > 0 ? `目前絕對值已有 ${hist.length} 筆。` : ""}</p>

@@ -73,9 +73,9 @@ export default async function Page({
           </div>
         </div>
         <div className="card">
-          <div className="muted">更新時間</div>
+          <div className="muted">更新時間（台北）</div>
           <div className="mt-1 text-[15px] tabular-nums">
-            {(rows[0] as any)?.createdAt ? new Date((rows[0] as any).createdAt).toLocaleString("zh-TW", { hour12: false }) : "-"}
+            {(rows[0] as any)?.createdAt ? new Date((rows[0] as any).createdAt).toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12: false }) : "-"}
           </div>
         </div>
       </div>
