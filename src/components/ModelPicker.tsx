@@ -47,10 +47,10 @@ export default function ModelPicker({
           setOpen(true);
         }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-400"
+        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
       />
       {open && (
-        <div className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg">
+        <div className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           {list.length === 0 && <div className="muted px-3 py-2 text-sm">沒有符合的（只有進過 Top20 的才有歷史資料）</div>}
           {list.map((c) => (
             <button
@@ -61,7 +61,7 @@ export default function ModelPicker({
                 onChange(c.hfId);
                 setOpen(false);
               }}
-              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-zinc-50"
+              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800"
             >
               <span className="truncate font-mono text-[13px]">{c.hfId}</span>
               <span className="muted shrink-0 text-xs tabular-nums">

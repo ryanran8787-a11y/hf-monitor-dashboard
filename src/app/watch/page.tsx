@@ -69,7 +69,7 @@ export default async function WatchPage() {
                       </a>
                     </td>
                     <td className="text-right tabular-nums">{s ? s.last.toLocaleString() : "-"}</td>
-                    <td className={`text-right tabular-nums ${delta != null && delta > 0 ? "text-emerald-600" : delta != null && delta < 0 ? "text-rose-600" : ""}`}>
+                    <td className={`text-right tabular-nums ${delta != null && delta > 0 ? "text-emerald-600 dark:text-emerald-400" : delta != null && delta < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>
                       {delta != null ? `${delta > 0 ? "+" : ""}${delta.toLocaleString()}` : "-"}
                     </td>
                     <td>{s ? <WatchSpark points={s.likes.slice(-48)} /> : <span className="muted text-xs">累積中</span>}</td>

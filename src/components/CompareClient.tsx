@@ -53,7 +53,7 @@ export default function CompareClient({
         <a className="link muted text-sm" href="/">
           ← 回總覽
         </a>
-        <span className="mx-1 h-5 w-px bg-zinc-200" />
+        <span className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
         {(["model", "dataset", "space"] as const).map((k) => (
           <button
             key={k}

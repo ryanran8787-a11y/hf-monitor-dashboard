@@ -23,6 +23,7 @@
 5. `/` 流派分析（僅 model）：版圖吃當期熱門榜 Top50 快照按 `task` 分組；趨勢吃 `MetricHistory`（`sortBy=trendingScore`，每輪各 task likes 佔比堆疊，Top5＋其他；`task` 欄 2026-09-23 起才寫，舊輪跳過）
 6. `/watch` 追蹤清單（無登入，全站一份，上限 50）：`WatchAdder` 即時搜 HF（`/api/hf-search`）→ `POST /api/watch`；collector Phase 5 每輪多抓一次（`sortBy="watch"`，失敗跳過）；`/watch` 現價＋24h 變化＋sparkline；詳情頁 `WatchToggle` 開關；取消只停更、歷史保留
 7. 日報：collector Phase 4，台北 08:00（UTC 00:00）用 `DigestLog` 去重搶發，模板組裝（吸粉前3＋新進榜＋掉榜），走舊 Discord webhook
+8. 深色模式：Tailwind `class` 模式＋`globals.css` 集中覆蓋（`.card/.pill/.muted/table/link`）；`ThemeProvider`（`src/lib/theme.tsx`）管狀態＋localStorage＋跟系統；layout 內嵌 paint 前腳本防閃白；五張圖表經 `chartTheme()` 換裝潢色，系列色兩邊通用
 4. `MetricHistory` 只留 90 天（collector 每輪順手清）
 
 ## 已知限制

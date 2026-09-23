@@ -94,13 +94,13 @@ export default async function ModelPage({
         <div className="card"><div className="muted">Downloads</div><div className="stat-num mt-1">{downloads?.toLocaleString?.() ?? "-"}</div></div>
         <div className="card">
           <div className="muted">近 7 天 Likes 成長</div>
-          <div className="mt-1 text-2xl font-semibold tracking-tight text-sky-700">
+          <div className="mt-1 text-2xl font-semibold tracking-tight text-sky-700 dark:text-sky-400">
             {likeGrow != null ? `+${likeGrow.toLocaleString()}${likePct != null ? ` (${likePct.toFixed(1)}%)` : ""}` : "-"}
           </div>
         </div>
         <div className="card">
           <div className="muted">熱門排名變化</div>
-          <div className={`mt-1 text-2xl font-semibold tracking-tight ${rankDelta != null && rankDelta > 0 ? "text-emerald-600" : rankDelta != null && rankDelta < 0 ? "text-rose-600" : ""}`}>
+          <div className={`mt-1 text-2xl font-semibold tracking-tight ${rankDelta != null && rankDelta > 0 ? "text-emerald-600 dark:text-emerald-400" : rankDelta != null && rankDelta < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>
             {rankFirst != null && rankLast != null
               ? `#${rankFirst} → #${rankLast}${rankDelta !== 0 ? (rankDelta! > 0 ? ` (▲${rankDelta})` : ` (▼${-rankDelta!})`) : ""}`
               : "未進榜/累積中"}
@@ -113,7 +113,7 @@ export default async function ModelPage({
           <h2 className="section-title mb-3">Tags</h2>
           <div className="flex flex-wrap gap-2">
             {(live.tags as string[]).slice(0, 30).map((t: string) => (
-              <span key={t} className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">{t}</span>
+              <span key={t} className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{t}</span>
             ))}
           </div>
         </div>

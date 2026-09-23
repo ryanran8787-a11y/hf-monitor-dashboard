@@ -16,3 +16,15 @@ a.link { @apply text-blue-600 hover:underline; }
 .pill-active { @apply rounded-full px-4 py-1 text-sm border border-zinc-900 bg-zinc-900 text-white; }
 .section-title { @apply text-sm font-semibold tracking-tight; }
 .stat-num { @apply text-3xl font-semibold tracking-tight tabular-nums; }
+
+/* 深色模式：html.dark 由 header 切換鈕控制，localStorage 記憶，預設跟系統 */
+.dark { color-scheme: dark; }
+.dark body { @apply bg-zinc-950 text-zinc-100; }
+.dark .card { @apply border-zinc-800 bg-zinc-900 shadow-none; }
+.dark .muted { @apply text-zinc-400; }
+.dark table.data th { @apply text-zinc-400 border-zinc-800 bg-zinc-900; }
+.dark table.data td { @apply border-zinc-800; }
+.dark table.data tbody tr:hover td { @apply bg-zinc-800/60; }
+.dark a.link { @apply text-sky-400; }
+.dark .pill { @apply border-zinc-700 text-zinc-300 bg-zinc-900 hover:border-zinc-500; }
+.dark .pill-active { @apply border-zinc-100 bg-zinc-100 text-zinc-900; }

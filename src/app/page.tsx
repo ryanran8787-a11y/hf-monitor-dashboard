@@ -139,7 +139,7 @@ export default async function Page({
             {k}s
           </a>
         ))}
-        <span className="mx-1 h-5 w-px bg-zinc-200" />
+        <span className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
         {SORTS.map((s) => (
           <a key={s.key} href={`/?kind=${kind}&sort=${s.key}`} className={sort === s.key ? "pill-active" : "pill"}>
             {s.label}
@@ -205,7 +205,7 @@ export default async function Page({
           <tbody>
             {rows.map((r: any, i: number) => (
               <tr key={`${r.hfId}-${i}`}>
-                <td className="tabular-nums text-zinc-400">{r.rank ?? i + 1}</td>
+                <td className="tabular-nums text-zinc-400 dark:text-zinc-500">{r.rank ?? i + 1}</td>
                 <td className="font-mono text-[13px]">
                   <a className="link" href={`/model/${r.hfId}?kind=${kind}`}>
                     {r.hfId}
@@ -213,7 +213,7 @@ export default async function Page({
                 </td>
                 <td className="text-right tabular-nums">{r.likes?.toLocaleString?.() ?? r.likes}</td>
                 <td className="text-right tabular-nums">{r.downloads?.toLocaleString?.() ?? r.downloads ?? "-"}</td>
-                <td><span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">{r.task ?? "-"}</span></td>
+                <td><span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{r.task ?? "-"}</span></td>
                 <td className="muted whitespace-nowrap tabular-nums">{r.lastModified?.slice(0, 10) ?? "-"}</td>
               </tr>
             ))}

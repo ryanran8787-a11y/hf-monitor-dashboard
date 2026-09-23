@@ -71,12 +71,12 @@ export default function WatchAdder() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="輸入名稱搜尋 HF（至少 2 字）…"
-        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-400"
+        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
       />
       {hits.length > 0 && (
-        <div className="mt-1 overflow-hidden rounded-lg border border-zinc-200 bg-white">
+        <div className="mt-1 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
           {hits.map((h) => (
-            <div key={h.hfId} className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-zinc-50">
+            <div key={h.hfId} className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800">
               <span className="truncate font-mono text-[13px]">{h.hfId}</span>
               <span className="flex shrink-0 items-center gap-2">
                 <span className="muted text-xs tabular-nums">♥{h.likes.toLocaleString()}</span>
@@ -84,7 +84,7 @@ export default function WatchAdder() {
                   type="button"
                   disabled={busy}
                   onClick={() => add(h.hfId)}
-                  className="rounded-md bg-zinc-900 px-2 py-0.5 text-xs text-white disabled:opacity-50"
+                  className="rounded-md bg-zinc-900 px-2 py-0.5 text-xs text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
                 >
                   追蹤
                 </button>
