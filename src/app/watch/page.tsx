@@ -10,7 +10,14 @@ function fmtD(d: Date) {
 }
 
 export default async function WatchPage() {
-  const watches = await db.watch.findMany({ orderBy: { createdAt: "desc" } }).catch(() => []);
+  // 讀取失敗和「真的沒追蹤」要長得不一樣，否則無法除錯
+  let loadError = "";
+  let watches: any[] = [];
+  try {
+    watches = await db.watch.findMany({ orderBy: { createdAt: "desc" } });
+  } catch {
+    loadError = "讀取追蹤清單失敗（可能是 DB 連線問題或 Watch 表尚未建出）。若剛部署，等下一輪收集跑完 db push 再回來看。";
+  }
 
   // 每台近 25h 的點：現價＋24h 變化＋sparkline（一次查完，程式裡分組）
   const stats = new Map<string, { likes: number[]; first: number; last: number; dl: number }>();
@@ -48,7 +55,9 @@ export default async function WatchPage() {
         <WatchAdder />
       </div>
 
-      {watches.length === 0 ? (
+      {loadError ? (
+        <div className="card border-l-4 border-l-rose-500 text-sm">{loadError}</div>
+      ) : watches.length === 0 ? (
         <div className="card muted">還沒追蹤任何模型，用上面搜尋框加一台。</div>
       ) : (
         <div className="card overflow-x-auto !p-0">
