@@ -24,6 +24,7 @@ model Snapshot {
   createdAt DateTime @default(now())
 
   @@index([kind, createdAt])
+  @@index([kind, sortBy, createdAt])
   @@index([hfId, createdAt])
 }
 
@@ -42,6 +43,7 @@ model MetricHistory {
 
   @@index([kind, hfId, createdAt])
   @@index([kind, hfId, sortBy, createdAt])
+  @@index([kind, sortBy, createdAt])
 }
 
 // 漲幅告警用：每個 repo 見過的最大值。突破峰值 + 超過閾值才通知。

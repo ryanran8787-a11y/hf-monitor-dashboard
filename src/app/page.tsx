@@ -119,7 +119,8 @@ export default async function Page({
     shareRows = Array.from(rounds.entries())
       .sort((x, y) => x[1].time - y[1].time)
       .map(([t, r]) => {
-        const row: Record<string, any> = { t };
+        // 先全部補 0：某輪缺席的 task 畫 0 而非斷線
+        const row: Record<string, any> = { t, t0: 0, t1: 0, t2: 0, t3: 0, t4: 0, other: 0 };
         let other = 0;
         for (const [task, v] of Array.from(r.byTask.entries())) {
           const i = topTasks.indexOf(task);

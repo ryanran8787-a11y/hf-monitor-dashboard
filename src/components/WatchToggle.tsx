@@ -12,8 +12,8 @@ export default function WatchToggle({ kind, hfId, initial }: { kind: string; hfI
     setBusy(true);
     try {
       if (on) {
-        await fetch(`/api/watch?kind=${kind}&hfId=${encodeURIComponent(hfId)}`, { method: "DELETE" });
-        setOn(false);
+        const r = await fetch(`/api/watch?kind=${kind}&hfId=${encodeURIComponent(hfId)}`, { method: "DELETE" });
+        if (r.ok) setOn(false);
       } else {
         const r = await fetch("/api/watch", {
           method: "POST",

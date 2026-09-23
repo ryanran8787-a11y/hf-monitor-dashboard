@@ -15,7 +15,7 @@ npm run dev       # http://localhost:3000
 ## 架構（單體 Next.js）
 
 ```
-HF Hub REST API ──> Collector (scripts/collect.mjs / POST /api/cron/collect)
+HF Hub REST API ──> Collector (scripts/collect.mjs，唯一寫入路徑）
                         ──> Prisma (SQLite本機 / Postgres上線)
                         ──> Next.js App Router (/, /api/trending)
 ```

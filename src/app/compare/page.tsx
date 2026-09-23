@@ -92,19 +92,20 @@ export default async function ComparePage({
   const rankKeys = orderKeys(rankTimes);
   const rankRows = rankKeys.map((t) => ({ t, a: rankA.get(t) ?? null, b: rankB.get(t) ?? null }));
 
-  // ---- 判決 ----
-  const valsA = absKeys.map((t) => absA.get(t)?.likes).filter((v) => v != null) as number[];
-  const valsB = absKeys.map((t) => absB.get(t)?.likes).filter((v) => v != null) as number[];
-  const aGrowLikes = valsA.length >= 2 ? valsA[valsA.length - 1] - valsA[0] : null;
-  const bGrowLikes = valsB.length >= 2 ? valsB[valsB.length - 1] - valsB[0] : null;
+  // ---- 判決（只比「兩邊都有資料」的重疊窗口，窗口不同直接比首尾會失真）----
+  const overlap = absKeys.filter((t) => absA.get(t)?.likes != null && absB.get(t)?.likes != null);
+  const growOf = (m: Map<string, H>) =>
+    overlap.length >= 2 ? m.get(overlap[overlap.length - 1])!.likes - m.get(overlap[0])!.likes : null;
+  const aGrowLikes = growOf(absA);
+  const bGrowLikes = growOf(absB);
   const rA = rankKeys.map((t) => rankA.get(t)).filter((v) => v != null) as number[];
   const rB = rankKeys.map((t) => rankB.get(t)).filter((v) => v != null) as number[];
   let verdict = "資料累積中（兩邊各要 2 筆以上），等收集多跑幾輪再回來看。";
   if (aGrowLikes != null && bGrowLikes != null && a !== "" && b !== "" && a !== b) {
-    if (aGrowLikes === bGrowLikes) verdict = "近 7 天平分秋色，兩邊吸粉一樣快。";
+    if (aGrowLikes === bGrowLikes) verdict = "同期平分秋色，兩邊吸粉一樣快。";
     else {
       const w = aGrowLikes > bGrowLikes ? a : b;
-      verdict = `${w} 近 7 天多吸 ${Math.abs(aGrowLikes - bGrowLikes).toLocaleString()} 個 likes，暫時領先。`;
+      verdict = `${w} 同期多吸 ${Math.abs(aGrowLikes - bGrowLikes).toLocaleString()} 個 likes，暫時領先。`;
     }
   }
   const summary: Summary = {

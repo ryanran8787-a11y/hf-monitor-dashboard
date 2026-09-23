@@ -1,4 +1,4 @@
-# 架構說明 v1.1
+# 架構說明 v1.2（2026-09-24 code review 修復：刪死路由、快照防倍增、日報 3 分鐘聚輪＋發送失敗刪佔位退重試、watch 5 併發＋失敗計數、PK 判決改重疊窗口、流派趨勢補零不斷線、補 kind+sortBy+createdAt 索引、Actions timeout 15min）
 
 ## 需求
 - 全站熱門：models / datasets / spaces，分 4 榜（🔥熱門 trendingScore / 👍Likes / ⬇下載 / 🆕新動態 lastModified）
@@ -33,4 +33,4 @@
 
 ## 風險
 - HF 匿名配額低 → 設 `HF_TOKEN`；collector 有 3 次 backoff
-- `/api/cron/collect` 預設關閉（沒設 `CRON_SECRET` 回 503），避免被刷
+- 收集只走 `scripts/collect.mjs`（Actions）；腐爛分叉 `/api/cron/collect` 已刪除（2026-09-24：歷史缺 rank/sortBy/task 且 250+ RTT 必超時）

@@ -30,15 +30,18 @@ async function fetchList(kind, sort, limit = 100) {
 }
 
 async function discord(text) {
-  if (!DISCORD) return;
+  if (!DISCORD) return true;
   try {
-    await fetch(DISCORD, {
+    const r = await fetch(DISCORD, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: text.slice(0, 1900) }),
     });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return true;
   } catch (e) {
     console.error("discord failed", e.message);
+    return false;
   }
 }
 
@@ -52,7 +55,13 @@ for (const kind of kinds) {
   for (const sort of sorts) {
     jobs.push((async () => {
       const items = await fetchList(kind, sort);
-      await db.snapshot.deleteMany({ where: { kind, sortBy: sort } }).catch(() => {});
+      // 先刪後建：刪失敗就整輪跳過（避免倍增；建失敗則該榜暫空、總覽 fallback 即時 API）
+      try {
+        await db.snapshot.deleteMany({ where: { kind, sortBy: sort } });
+      } catch (e) {
+        console.error(`snapshot delete fail ${kind}/${sort}`, e.message);
+        return null;
+      }
       await db.snapshot.createMany({
         data: items.map((x, i) => ({
           kind, hfId: x.id ?? x.name, author: x.author ?? null,
@@ -153,25 +162,27 @@ if (alerts.length > 0) {
 const taipeiHour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Taipei", hour: "numeric", hour12: false }).format(new Date()));
 if (taipeiHour === 8 && DISCORD) {
   const dateStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  const fmtT = (d) => d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
   try {
     await db.digestLog.create({ data: { date: dateStr } }); // 搶到 = 今天第一個，直接發；搶輸（P2002）跳過
+    // 同批可能橫跨分鐘：取最新點往前 3 分鐘內的全部當「本輪」，避免切成兩半
+    const cluster = (rows) => {
+      if (rows.length === 0) return [];
+      const sorted = rows.slice().sort((a, b) => b.createdAt - a.createdAt);
+      const cutoff = sorted[0].createdAt - 3 * 60 * 1000;
+      return sorted.filter((h) => h.createdAt >= cutoff).sort((x, y) => (x.rank ?? 99) - (y.rank ?? 99)).slice(0, 20);
+    };
     const latest = await db.metricHistory.findMany({
       where: { kind: "model", sortBy: "trendingScore", createdAt: { gte: new Date(Date.now() - 2 * 3600 * 1000) } },
-      orderBy: [{ createdAt: "desc" }, { rank: "asc" }],
+      orderBy: { createdAt: "desc" },
       take: 60,
     });
-    let curKey = "";
-    if (latest.length > 0) curKey = fmtT(latest.reduce((x, y) => (x.createdAt > y.createdAt ? x : y)).createdAt);
-    const curRows = latest.filter((h) => fmtT(h.createdAt) === curKey).sort((x, y) => (x.rank ?? 99) - (y.rank ?? 99)).slice(0, 20);
+    const curRows = cluster(latest);
     const oldAll = await db.metricHistory.findMany({
       where: { kind: "model", sortBy: "trendingScore", createdAt: { lte: new Date(Date.now() - 24 * 3600 * 1000) } },
       orderBy: { createdAt: "desc" },
       take: 60,
     });
-    let oldKey = "";
-    if (oldAll.length > 0) oldKey = fmtT(oldAll.reduce((x, y) => (x.createdAt > y.createdAt ? x : y)).createdAt);
-    const oldRows = oldAll.filter((h) => fmtT(h.createdAt) === oldKey);
+    const oldRows = cluster(oldAll);
     const curMap = new Map(curRows.map((h) => [h.hfId, h]));
     const oldMap = new Map(oldRows.map((h) => [h.hfId, h]));
     const newOnes = curRows.map((h) => h.hfId).filter((id) => !oldMap.has(id));
@@ -188,8 +199,14 @@ if (taipeiHour === 8 && DISCORD) {
     }
     if (newOnes.length > 0) lines.push(`🆕 新進榜：${newOnes.slice(0, 5).join("、")}${newOnes.length > 5 ? ` 等 ${newOnes.length} 個` : ""}`);
     if (dropped.length > 0) lines.push(`📉 掉出榜：${dropped.slice(0, 5).join("、")}${dropped.length > 5 ? ` 等 ${dropped.length} 個` : ""}`);
-    await discord(lines.join("\n"));
-    console.log(`digest sent for ${dateStr}`);
+    await discord(lines.join("\n")).then(async (sent) => {
+      if (sent) {
+        console.log(`digest sent for ${dateStr}`);
+      } else {
+        // 發送失敗就刪掉佔位，讓 08 點內下一輪重試
+        await db.digestLog.delete({ where: { date: dateStr } }).catch(() => {});
+      }
+    });
   } catch (e) {
     if (e?.code !== "P2002") console.error("digest failed", e.message);
   }
@@ -200,20 +217,27 @@ const watched = await db.watch.findMany({ take: 50 }).catch(() => []);
 if (watched.length > 0) {
   const seg = (k) => (k === "model" ? "models" : k === "dataset" ? "datasets" : "spaces");
   const wrows = [];
-  await Promise.all(
-    watched.map(async (w) => {
-      try {
-        const r = await fetch(`${API}/${seg(w.kind)}/${w.hfId}`, { headers });
-        if (!r.ok) return;
-        const x = await r.json();
-        wrows.push({ kind: w.kind, hfId: w.hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0, rank: null, sortBy: "watch", task: x.pipeline_tag ?? null });
-      } catch {}
-    })
-  );
+  let wfail = 0;
+  let wfailMsg = "";
+  for (let i = 0; i < watched.length; i += 5) {
+    await Promise.all(
+      watched.slice(i, i + 5).map(async (w) => {
+        try {
+          const r = await fetch(`${API}/${seg(w.kind)}/${w.hfId}`, { headers });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const x = await r.json();
+          wrows.push({ kind: w.kind, hfId: w.hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0, rank: null, sortBy: "watch", task: x.pipeline_tag ?? null });
+        } catch (e) {
+          wfail++;
+          if (!wfailMsg) wfailMsg = `${w.hfId}: ${e.message}`;
+        }
+      })
+    );
+  }
   if (wrows.length > 0) {
     await db.metricHistory.createMany({ data: wrows }).catch((e) => console.error("watch history failed", e.message));
   }
-  console.log(`phase5 watch: ${wrows.length}/${watched.length}`);
+  console.log(`phase5 watch: ${wrows.length}/${watched.length} fail=${wfail}${wfailMsg ? ` e.g. ${wfailMsg}` : ""}`);
 }
 // 歷史曲線只留 90 天，避免免費用量爆炸
 const cutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000);
