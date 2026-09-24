@@ -48,16 +48,20 @@ export default async function ModelPage({
   const downloads = live?.downloads ?? hist.at(-1)?.downloads ?? null;
   const watched = await db.watch.findUnique({ where: { kind_hfId: { kind, hfId } } }).catch(() => null);
 
-  // ---- 絕對值曲線：同時間多榜單會重複，取 likes 榜優先，否則同時間戳去重留最新 ----
-  const absPool = hist.filter((h) => h.sortBy === "likes");
-  const fallbackPool = hist.filter((h) => h.sortBy !== "likes");
-  const dedupLast = (arr: typeof hist) => {
-    const m = new Map<number, (typeof hist)[number]>();
-    for (const h of arr) m.set(new Date(h.createdAt).getTime(), h); // 升序，後寫=最新
-    return Array.from(m.values());
-  };
-  const absRows = (absPool.length > 0 ? dedupLast(absPool) : dedupLast(fallbackPool))
-    .map((h) => ({ t: fmtT(new Date(h.createdAt)), likes: h.likes, downloads: h.downloads }));
+  // ---- 絕對值曲線：同分鐘多榜單會重複，likes 榜優先；
+  // 缺 likes 的時間點用其他榜補上（舊 bug：僅 1 筆 likes 會蓋掉整條 trendingScore 歷史，導致畫不出線）
+  const absMap = new Map<number, { t: string; time: number; likes: number; downloads: number; sortBy: string }>();
+  for (const h of hist) {
+    // hist 按時間升序；同時間戳 likes 覆蓋非 likes
+    const ms = new Date(h.createdAt).getTime();
+    const cur = absMap.get(ms);
+    if (!cur || (cur.sortBy !== "likes" && h.sortBy === "likes")) {
+      absMap.set(ms, { t: fmtT(new Date(h.createdAt)), time: ms, likes: h.likes, downloads: h.downloads, sortBy: h.sortBy });
+    }
+  }
+  const absRows = Array.from(absMap.values())
+    .sort((x, y) => x.time - y.time)
+    .map(({ t, likes, downloads }) => ({ t, likes, downloads }));
 
   // ---- 排名曲線：按時間合併各榜單排名 ----
   const byTime = new Map<string, Record<string, any>>();

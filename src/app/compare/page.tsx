@@ -13,13 +13,14 @@ function fmtT(d: Date) {
 
 type H = { createdAt: Date; likes: number; downloads: number; rank: number | null; sortBy: string };
 
-// 同一分鐘多榜單會重複：likes 榜優先，否則取第一筆；同分鐘多筆留最新的（hist 按時間升序，後寫覆蓋）
+// 同一分鐘多榜單會重複：likes 優先，缺 likes 的分鐘用其他榜補上
+// （舊 bug：僅 1 筆 likes 會蓋掉整條 trendingScore 歷史；hist 按時間升序，同分鐘 likes 覆蓋非 likes）
 function pickAbs(hist: H[]) {
-  const liked = hist.filter((h) => h.sortBy === "likes");
-  const pool = liked.length > 0 ? liked : hist;
   const m = new Map<string, H>();
-  for (const h of pool) {
-    m.set(fmtT(h.createdAt), h);
+  for (const h of hist) {
+    const k = fmtT(h.createdAt);
+    const cur = m.get(k);
+    if (!cur || (cur.sortBy !== "likes" && h.sortBy === "likes")) m.set(k, h);
   }
   return m;
 }
