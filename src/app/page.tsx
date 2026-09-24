@@ -135,6 +135,18 @@ export default async function Page({
         row.other = r.total > 0 ? (other / r.total) * 100 : 0;
         return row;
       });
+    // 佔比本身幾乎不動，堆疊圖看不出變化：改以「首日=100」指數化，只看消長方向
+    const firstBase: Record<string, number> = {};
+    for (const row of shareRows) {
+      for (const k of keys) {
+        if (!(k in firstBase) && row[k] > 0) firstBase[k] = row[k];
+      }
+    }
+    shareRows = shareRows.map((row) => {
+      const o: Record<string, any> = { t: row.t };
+      for (const k of keys) o[k] = firstBase[k] ? (row[k] / firstBase[k]) * 100 : 100;
+      return o;
+    });
   }
 
   return (
@@ -198,7 +210,8 @@ export default async function Page({
 
       {kind === "model" && (
         <div className="card">
-          <h2 className="section-title mb-3">流派趨勢（近 7 天，台北時間）</h2>
+          <h2 className="section-title mb-1">流派趨勢（近 7 天，台北時間）</h2>
+          <p className="muted mb-3 text-xs">各流派佔比以首日=100 指數化，只看消長方向（虛線=首日基準）。</p>
           {shareRows.length >= 2 ? (
             <TaskShareChart data={shareRows} series={shareSeries} />
           ) : (
