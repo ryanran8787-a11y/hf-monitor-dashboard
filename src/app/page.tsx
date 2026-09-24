@@ -135,12 +135,19 @@ export default async function Page({
         row.other = r.total > 0 ? (other / r.total) * 100 : 0;
         return row;
       });
-    // 佔比本身幾乎不動，堆疊圖看不出變化：改以「首日=100」指數化，只看消長方向
-    const firstBase: Record<string, number> = {};
+    // 佔比本身幾乎不動，堆疊圖看不出變化：改以「首日=100」指數化，只看消長方向。
+    // 基準取前 3 個非零點的平均：首輪常是不完整輪（task 欄剛上線），單點基準會把抖動放大（例如「其他」2.4%→3.2% 畫成 133）。
+    const baseVals: Record<string, number[]> = {};
     for (const row of shareRows) {
       for (const k of keys) {
-        if (!(k in firstBase) && row[k] > 0) firstBase[k] = row[k];
+        const acc = baseVals[k] ?? (baseVals[k] = []);
+        if (row[k] > 0 && acc.length < 3) acc.push(row[k]);
       }
+    }
+    const firstBase: Record<string, number> = {};
+    for (const k of keys) {
+      const vs = baseVals[k] ?? [];
+      firstBase[k] = vs.length > 0 ? vs.reduce((a, b) => a + b, 0) / vs.length : 0;
     }
     shareRows = shareRows.map((row) => {
       const o: Record<string, any> = { t: row.t };
