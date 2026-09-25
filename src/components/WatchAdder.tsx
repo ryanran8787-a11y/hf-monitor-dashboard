@@ -97,7 +97,7 @@ export default function WatchAdder() {
           ))}
         </div>
       )}
-      {searching && hits.length === 0 && <p className="muted mt-1 text-xs">搜尋中…</p>}
+      {searching && <p className="muted mt-1 text-xs">搜尋中…</p>}
       {msg && <p className="muted mt-1 text-xs">{msg}</p>}
     </div>
   );

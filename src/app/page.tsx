@@ -8,6 +8,12 @@ export const revalidate = 600;
 
 const TASK_COLORS = ["#0284c7", "#ea580c", "#7c3aed", "#059669", "#e11d48", "#64748b"];
 
+// 流派指數行：t 為時間標籤，其餘鍵為各流派指數（首日基準=100）；缺席的輪次為 null（斷線），不用 0（會畫成崩盤）
+interface GenreIndexRow {
+  t: string;
+  [k: string]: string | number | null;
+}
+
 function fmtT(d: Date) {
   return d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
 }
@@ -57,7 +63,7 @@ export default async function Page({
   // ---- 流派分析（只做 model：datasets/spaces 的 task 幾乎全空）----
   let taskSlices: TaskSlice[] = [];
   let taskTotalLikes = 0;
-  let shareRows: Record<string, any>[] = [];
+  let shareRows: GenreIndexRow[] = [];
   let shareSeries: ShareSeries[] = [];
   if (kind === "model") {
     // 版圖：當期熱門榜 Top50 按 task 分組（快照現成，零額外成本）
@@ -98,14 +104,14 @@ export default async function Page({
       .catch(() => []);
     const rounds = new Map<string, { time: number; byTask: Map<string, number>; total: number }>();
     for (const h of hist) {
-      if (!(h as any).task) continue;
+      if (!h.task) continue;
       const k = fmtT(new Date(h.createdAt));
       let r = rounds.get(k);
       if (!r) {
         r = { time: new Date(h.createdAt).getTime(), byTask: new Map(), total: 0 };
         rounds.set(k, r);
       }
-      const t = (h as any).task as string;
+      const t: string = h.task;
       r.byTask.set(t, (r.byTask.get(t) || 0) + (h.likes ?? 0));
       r.total += h.likes ?? 0;
     }
@@ -125,7 +131,7 @@ export default async function Page({
       .sort((x, y) => x[1].time - y[1].time)
       .map(([t, r]) => {
         // 先全部補 0：某輪缺席的 task 畫 0 而非斷線
-        const row: Record<string, any> = { t, t0: 0, t1: 0, t2: 0, t3: 0, t4: 0, other: 0 };
+        const row: GenreIndexRow = { t, t0: 0, t1: 0, t2: 0, t3: 0, t4: 0, other: 0 };
         let other = 0;
         for (const [task, v] of Array.from(r.byTask.entries())) {
           const i = topTasks.indexOf(task);
@@ -140,19 +146,20 @@ export default async function Page({
     const baseVals: Record<string, number[]> = {};
     for (const row of shareRows) {
       for (const k of keys) {
-        const acc = baseVals[k] ?? (baseVals[k] = []);
-        if (row[k] > 0 && acc.length < 3) acc.push(row[k]);
+        const baseSamples = baseVals[k] ?? (baseVals[k] = []);
+        if ((row[k] as number) > 0 && baseSamples.length < 3) baseSamples.push(row[k] as number);
       }
     }
     const firstBase: Record<string, number> = {};
     for (const k of keys) {
-      const vs = baseVals[k] ?? [];
-      firstBase[k] = vs.length > 0 ? vs.reduce((a, b) => a + b, 0) / vs.length : 0;
+      const samples = baseVals[k] ?? [];
+      firstBase[k] = samples.length > 0 ? samples.reduce((a, b) => a + b, 0) / samples.length : 0;
     }
     shareRows = shareRows.map((row) => {
-      const o: Record<string, any> = { t: row.t };
-      for (const k of keys) o[k] = firstBase[k] ? (row[k] / firstBase[k]) * 100 : 100;
-      return o;
+      const idxRow: GenreIndexRow = { t: row.t as string };
+      // 缺席輪次映射 null（斷線）；全零系列基準為 0 也給 null，不畫假 100 線
+      for (const k of keys) idxRow[k] = firstBase[k] && (row[k] as number) > 0 ? ((row[k] as number) / firstBase[k]) * 100 : null;
+      return idxRow;
     });
   }
 

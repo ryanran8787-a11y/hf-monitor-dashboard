@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { mergeAbsByMinute, fmtT, AbsMerged } from "@/lib/absMerge";
 import CompareClient, { Summary } from "@/components/CompareClient";
 import { Candidate } from "@/components/ModelPicker";
 
@@ -7,23 +8,7 @@ export const revalidate = 600;
 const WINDOW_DAYS = 7;
 const KINDS = ["model", "dataset", "space"] as const;
 
-function fmtT(d: Date) {
-  return d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
 type H = { createdAt: Date; likes: number; downloads: number; rank: number | null; sortBy: string };
-
-// 同一分鐘多榜單會重複：likes 優先，缺 likes 的分鐘用其他榜補上
-// （舊 bug：僅 1 筆 likes 會蓋掉整條 trendingScore 歷史；hist 按時間升序，同分鐘 likes 覆蓋非 likes）
-function pickAbs(hist: H[]) {
-  const m = new Map<string, H>();
-  for (const h of hist) {
-    const k = fmtT(h.createdAt);
-    const cur = m.get(k);
-    if (!cur || (cur.sortBy !== "likes" && h.sortBy === "likes")) m.set(k, h);
-  }
-  return m;
-}
 
 function orderKeys(times: Map<string, number>) {
   return Array.from(times.entries()).sort((x, y) => x[1] - y[1]).map(([t]) => t);
@@ -66,12 +51,11 @@ export default async function ComparePage({
   ]);
 
   // ---- 絕對值對比 ----
-  const absA = pickAbs(histA as H[]);
-  const absB = pickAbs(histB as H[]);
+  const absA = mergeAbsByMinute(histA);
+  const absB = mergeAbsByMinute(histB);
   const absTimes = new Map<string, number>();
-  for (const h of Array.from(absA.values()).concat(Array.from(absB.values()))) {
-    const k = fmtT(h.createdAt);
-    if (!absTimes.has(k)) absTimes.set(k, h.createdAt.getTime());
+  for (const [k, v] of Array.from(absA.entries()).concat(Array.from(absB.entries()))) {
+    if (!absTimes.has(k)) absTimes.set(k, v.time);
   }
   const absKeys = orderKeys(absTimes);
   const likesRows = absKeys.map((t) => ({ t, a: absA.get(t)?.likes ?? null, b: absB.get(t)?.likes ?? null }));
@@ -84,9 +68,9 @@ export default async function ComparePage({
   for (const [h, m] of [[...histA], [...histB]].map((arr, i) => [arr, i === 0 ? rankA : rankB] as const)) {
     for (const r of h as H[]) {
       if (r.sortBy !== "trendingScore" || r.rank == null) continue;
-      const k = fmtT(r.createdAt);
-      m.set(k, r.rank); // 同分鐘重跑留最新（hist 按時間升序）
-      if (!rankTimes.has(k)) rankTimes.set(k, r.createdAt.getTime());
+      const k = fmtT(new Date(r.createdAt));
+      m.set(k, r.rank); // 同分鐘重跑留最新；時間戳同步更新，否則值與 x 軸錯位
+      rankTimes.set(k, new Date(r.createdAt).getTime());
     }
   }
   const rankKeys = orderKeys(rankTimes);
@@ -94,7 +78,7 @@ export default async function ComparePage({
 
   // ---- 判決（只比「兩邊都有資料」的重疊窗口，窗口不同直接比首尾會失真）----
   const overlap = absKeys.filter((t) => absA.get(t)?.likes != null && absB.get(t)?.likes != null);
-  const growOf = (m: Map<string, H>) =>
+  const growOf = (m: Map<string, AbsMerged>) =>
     overlap.length >= 2 ? m.get(overlap[overlap.length - 1])!.likes - m.get(overlap[0])!.likes : null;
   const aGrowLikes = growOf(absA);
   const bGrowLikes = growOf(absB);

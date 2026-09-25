@@ -10,7 +10,7 @@ export interface ShareSeries {
 
 // 流派趨勢：各 task 佔比以首日=100 指數化折線，只看消長方向。
 // （佔比本身幾乎不動，堆疊面積圖看不出變化，故不用堆疊。）
-export default function TaskShareChart({ data, series }: { data: Record<string, any>[]; series: ShareSeries[] }) {
+export default function TaskShareChart({ data, series }: { data: Record<string, string | number | null>[]; series: ShareSeries[] }) {
   const { theme } = useTheme();
   const c = chartTheme(theme === "dark");
   return (
