@@ -244,8 +244,9 @@ if (watched.length > 0) {
   }
   console.log(`phase5 watch: ${wrows.length}/${watched.length} fail=${wfail}${wfailMsg ? ` e.g. ${wfailMsg}` : ""}`);
 }
-// 歷史曲線只留 90 天，避免免費用量爆炸
-const cutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000);
+// 歷史曲線只留 30 天：MetricHistory 是唯一無限增長的表，90 天穩態約 60 萬行會拖慢查詢並逼近免費額度；
+// 30 天穩態約 18 萬行，而所有圖表都只吃 7 天窗口，綽綽有餘
+const cutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000);
 const pruned = await db.metricHistory.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch(() => ({ count: 0 }));
 if (pruned.count > 0) console.log(`pruned ${pruned.count} old history rows`);
 console.log(`done total=${total} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);

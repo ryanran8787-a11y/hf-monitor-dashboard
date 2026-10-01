@@ -44,6 +44,7 @@ model MetricHistory {
   @@index([kind, hfId, createdAt])
   @@index([kind, hfId, sortBy, createdAt])
   @@index([kind, sortBy, createdAt])
+  @@index([createdAt]) // 每輪 prune + 看門狗查最新一筆用，否則全表掃
 }
 
 // 漲幅告警用：每個 repo 見過的最大值。突破峰值 + 超過閾值才通知。
