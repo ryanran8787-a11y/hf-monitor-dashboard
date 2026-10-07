@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   const kind = u.searchParams.get("kind") ?? "model";
   const q = (u.searchParams.get("q") ?? "").trim();
   if (!["model", "dataset", "space"].includes(kind)) {
-    return NextResponse.json({ error: "kind 錯誤" }, { status: 400 });
+    return NextResponse.json({ error: "Bad kind" }, { status: 400 });
   }
   if (q.length < 2) return NextResponse.json({ items: [] });
   const path = kind === "model" ? "models" : kind === "dataset" ? "datasets" : "spaces";
@@ -30,6 +30,6 @@ export async function GET(req: Request) {
       .filter((i) => i.hfId);
     return NextResponse.json({ items });
   } catch {
-    return NextResponse.json({ error: "搜尋失敗" }, { status: 502 });
+    return NextResponse.json({ error: "Search failed" }, { status: 502 });
   }
 }

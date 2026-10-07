@@ -16,18 +16,18 @@ export async function POST(req: Request) {
   const kind = body?.kind;
   const hfId = body?.hfId;
   if (!KINDS.includes(kind) || typeof hfId !== "string" || !HFID.test(hfId)) {
-    return NextResponse.json({ error: "kind 須為 model/dataset/space，hfId 格式如 org/name" }, { status: 400 });
+    return NextResponse.json({ error: "kind must be model/dataset/space, hfId like org/name" }, { status: 400 });
   }
   try {
     const count = await db.watch.count();
     if (count >= MAX_WATCH) {
-      return NextResponse.json({ error: `追蹤上限 ${MAX_WATCH} 台，先取消一些` }, { status: 429 });
+      return NextResponse.json({ error: `Watchlist full (${MAX_WATCH} max). Unwatch something first.` }, { status: 429 });
     }
     await db.watch.create({ data: { kind, hfId } });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     if (e?.code === "P2002") return NextResponse.json({ ok: true, existed: true });
-    return NextResponse.json({ error: "DB 寫入失敗" }, { status: 500 });
+    return NextResponse.json({ error: "DB write failed" }, { status: 500 });
   }
 }
 
@@ -36,7 +36,7 @@ export async function DELETE(req: Request) {
   const kind = u.searchParams.get("kind") ?? "";
   const hfId = u.searchParams.get("hfId") ?? "";
   if (!KINDS.includes(kind) || !HFID.test(hfId)) {
-    return NextResponse.json({ error: "參數錯誤" }, { status: 400 });
+    return NextResponse.json({ error: "Bad parameters" }, { status: 400 });
   }
   try {
     await db.watch.delete({ where: { kind_hfId: { kind, hfId } } });

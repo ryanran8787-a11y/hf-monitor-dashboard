@@ -40,7 +40,7 @@ export default function ModelPicker({
       </div>
       <input
         value={open ? q : value}
-        placeholder="輸入關鍵字搜尋…"
+        placeholder="Type to search…"
         onChange={(e) => setQ(e.target.value)}
         onFocus={() => {
           setQ("");
@@ -51,7 +51,7 @@ export default function ModelPicker({
       />
       {open && (
         <div className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-          {list.length === 0 && <div className="muted px-3 py-2 text-sm">沒有符合的（只有進過 Top20 的才有歷史資料）</div>}
+          {list.length === 0 && <div className="muted px-3 py-2 text-sm">No match (only ex-Top-20 repos have history)</div>}
           {list.map((c) => (
             <button
               key={c.hfId}
@@ -65,7 +65,7 @@ export default function ModelPicker({
             >
               <span className="truncate font-mono text-[13px]">{c.hfId}</span>
               <span className="muted shrink-0 text-xs tabular-nums">
-                ♥{c.likes.toLocaleString()} · {c.points}筆
+                ♥{c.likes.toLocaleString()} · {c.points} pts
               </span>
             </button>
           ))}

@@ -51,7 +51,7 @@ export default function CompareClient({
     <main className="grid gap-4">
       <div className="card flex flex-wrap items-center gap-2 !p-3">
         <a className="link muted text-sm" href="/">
-          ← 回總覽
+          ← Back to overview
         </a>
         <span className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
         {(["model", "dataset", "space"] as const).map((k) => (
@@ -64,26 +64,26 @@ export default function CompareClient({
             {k}s
           </button>
         ))}
-        <span className="muted ml-auto text-xs">只收錄進過 Top20 的（有歷史資料才能畫線）</span>
+        <span className="muted ml-auto text-xs">Only repos that made the Top 20 (need history to draw)</span>
       </div>
 
       <div className="card grid gap-4 md:grid-cols-2">
-        <ModelPicker label="A 選手" color={A_COLOR} candidates={candidates} value={a} onChange={(v) => go(router, kind, v, b || v)} />
-        <ModelPicker label="B 選手" color={B_COLOR} candidates={candidates} value={b} onChange={(v) => go(router, kind, a || v, v)} />
+        <ModelPicker label="Contender A" color={A_COLOR} candidates={candidates} value={a} onChange={(v) => go(router, kind, v, b || v)} />
+        <ModelPicker label="Contender B" color={B_COLOR} candidates={candidates} value={b} onChange={(v) => go(router, kind, a || v, v)} />
       </div>
 
       {same ? (
-        <div className="card">兩邊選了同一台，換一台才有得打。</div>
+        <div className="card">Same repo on both sides. Pick a different one.</div>
       ) : (
         <>
           <div className="card border-l-4" style={{ borderLeftColor: A_COLOR }}>
-            <div className="muted text-xs">近 7 天判決</div>
+            <div className="muted text-xs">7-day verdict</div>
             <div className="mt-1 text-lg font-semibold tracking-tight">{summary.verdict}</div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="card">
-              <div className="muted text-xs">Likes 成長（近 7 天）</div>
+              <div className="muted text-xs">Likes growth (7d)</div>
               <div className="mt-1 text-xl font-semibold tabular-nums" style={{ color: A_COLOR }}>
                 A {summary.aGrowLikes != null ? `+${summary.aGrowLikes.toLocaleString()}` : "-"}
               </div>
@@ -92,43 +92,43 @@ export default function CompareClient({
               </div>
             </div>
             <div className="card">
-              <div className="muted text-xs">熱門排名變化</div>
+              <div className="muted text-xs">Trending rank change</div>
               <div className="mt-1 text-xl font-semibold tabular-nums" style={{ color: A_COLOR }}>
-                A {summary.aRankFirst != null && summary.aRankLast != null ? `#${summary.aRankFirst} → #${summary.aRankLast}` : "未進榜/累積中"}
+                A {summary.aRankFirst != null && summary.aRankLast != null ? `#${summary.aRankFirst} → #${summary.aRankLast}` : "Unranked / accumulating"}
               </div>
               <div className="mt-1 text-xl font-semibold tabular-nums" style={{ color: B_COLOR }}>
-                B {summary.bRankFirst != null && summary.bRankLast != null ? `#${summary.bRankFirst} → #${summary.bRankLast}` : "未進榜/累積中"}
+                B {summary.bRankFirst != null && summary.bRankLast != null ? `#${summary.bRankFirst} → #${summary.bRankLast}` : "Unranked / accumulating"}
               </div>
             </div>
           </div>
 
           <div className="card">
-            <h2 className="section-title mb-3">Likes 對比（近 7 天，台北時間）</h2>
+            <h2 className="section-title mb-3">Likes compared (7d, Taipei time)</h2>
             {likesRows.length >= 2 ? (
               <CompareChart data={likesRows} series={likeSeries} />
             ) : (
-              <p className="muted">資料不足（兩邊各要 2 筆以上才畫線），等收集多跑幾輪。</p>
+              <p className="muted">Not enough data (each side needs 2+ points). Wait for more rounds.</p>
             )}
           </div>
 
           <div className="card">
-            <h2 className="section-title mb-3">Downloads 對比（近 7 天，台北時間）</h2>
+            <h2 className="section-title mb-3">Downloads compared (7d, Taipei time)</h2>
             {dlRows.length >= 2 ? (
               <CompareChart data={dlRows} series={likeSeries} />
             ) : (
-              <p className="muted">資料不足（兩邊各要 2 筆以上才畫線），等收集多跑幾輪。</p>
+              <p className="muted">Not enough data (each side needs 2+ points). Wait for more rounds.</p>
             )}
           </div>
 
           <div className="card">
-            <h2 className="section-title mb-3">熱門排名對比（近 7 天，台北時間）</h2>
+            <h2 className="section-title mb-3">Trending rank compared (7d, Taipei time)</h2>
             {rankRows.length >= 2 ? (
               <>
                 <RankChart data={rankRows} series={likeSeries.map((s) => ({ ...s }))} />
-                <p className="muted mt-1 text-xs">只收錄進榜前 20 的時間點；掉出榜單處會斷線。Y 軸越上名次越高。</p>
+                <p className="muted mt-1 text-xs">Only Top-20 points. Gaps mean off-chart. Higher = better.</p>
               </>
             ) : (
-              <p className="muted">排名數據累積中，兩邊都進榜才有線。</p>
+              <p className="muted">Ranking data accumulating. Needs both sides on-chart.</p>
             )}
           </div>
         </>

@@ -3,7 +3,7 @@
 export default function WatchSpark({ points, animate = false }: { points: number[]; animate?: boolean }) {
   const W = 100;
   const H = 28;
-  if (points.length < 2) return <span className="muted text-xs">累積中</span>;
+  if (points.length < 2) return <span className="muted text-xs">Accumulating</span>;
   const min = Math.min(...points);
   const max = Math.max(...points);
   const span = max - min || 1;

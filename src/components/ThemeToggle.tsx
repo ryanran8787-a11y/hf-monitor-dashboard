@@ -8,8 +8,8 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={toggle}
-      title={theme === "dark" ? "切換淺色" : "切換深色"}
-      aria-label={theme === "dark" ? "切換淺色" : "切換深色"}
+      title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+      aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"}
       className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
     >
       {theme === "dark" ? (

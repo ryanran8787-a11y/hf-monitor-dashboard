@@ -15,14 +15,14 @@ interface GenreIndexRow {
 }
 
 function fmtT(d: Date) {
-  return d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  return d.toLocaleString("en-US", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 const SORTS = [
-  { key: "trendingScore", label: "熱門" },
+  { key: "trendingScore", label: "Trending" },
   { key: "likes", label: "Likes" },
-  { key: "downloads", label: "下載" },
-  { key: "lastModified", label: "新動態" },
+  { key: "downloads", label: "Downloads" },
+  { key: "lastModified", label: "New" },
 ] as const;
 
 async function getLatest(kind: string, sort: string) {
@@ -76,7 +76,7 @@ export default async function Page({
       .catch(() => []);
     const byTask = new Map<string, { count: number; likes: number }>();
     for (const r of snap) {
-      const t = r.task || "未分類";
+      const t = r.task || "Uncategorized";
       const e = byTask.get(t) || { count: 0, likes: 0 };
       e.count += 1;
       e.likes += r.likes ?? 0;
@@ -90,7 +90,7 @@ export default async function Page({
     const rest = all.slice(8);
     taskSlices =
       rest.length > 0
-        ? top.concat([{ task: "其他", count: rest.reduce((n, s) => n + s.count, 0), likes: rest.reduce((n, s) => n + s.likes, 0) }])
+        ? top.concat([{ task: "Other", count: rest.reduce((n, s) => n + s.count, 0), likes: rest.reduce((n, s) => n + s.likes, 0) }])
         : top;
 
     // 趨勢：每輪各 task 的 likes 佔比（task 欄 2026-09-23 起才寫，舊輪次跳過）
@@ -126,7 +126,7 @@ export default async function Page({
     const keys = ["t0", "t1", "t2", "t3", "t4", "other"];
     shareSeries = topTasks
       .map((t, i) => ({ key: keys[i], label: t, color: TASK_COLORS[i] }))
-      .concat([{ key: "other", label: "其他", color: TASK_COLORS[5] }]);
+      .concat([{ key: "other", label: "Other", color: TASK_COLORS[5] }]);
     shareRows = Array.from(rounds.entries())
       .sort((x, y) => x[1].time - y[1].time)
       .map(([t, r]) => {
@@ -179,18 +179,18 @@ export default async function Page({
         ))}
         <span className="muted ml-auto flex items-center gap-1.5 text-xs">
           <span className={`inline-block h-1.5 w-1.5 rounded-full ${live ? "bg-amber-500" : "bg-emerald-500"}`} />
-          {live ? "即時 HF API" : "DB 快照"} · {kind} / {sort}
+          {live ? "Live HF API" : "DB snapshot"} · {kind} / {sort}
         </span>
         {!live && snapAgeH > 2 && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-            快照已 {Math.floor(snapAgeH)} 小時未更新，收集可能中斷
+            Snapshot {Math.floor(snapAgeH)}h stale, collection may be down
           </span>
         )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="card">
-          <div className="muted">榜單筆數</div>
+          <div className="muted">Entries</div>
           <div className="stat-num mt-1">{rows.length}</div>
         </div>
         <div className="card">
@@ -200,9 +200,9 @@ export default async function Page({
           </div>
         </div>
         <div className="card">
-          <div className="muted">更新時間（台北）</div>
+          <div className="muted">Updated (Taipei)</div>
           <div className="mt-1 text-[15px] tabular-nums">
-            {(rows[0] as any)?.createdAt ? new Date((rows[0] as any).createdAt).toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12: false }) : "-"}
+            {(rows[0] as any)?.createdAt ? new Date((rows[0] as any).createdAt).toLocaleString("en-US", { timeZone: "Asia/Taipei", hour12: false }) : "-"}
           </div>
         </div>
       </div>
@@ -216,20 +216,20 @@ export default async function Page({
 
             {kind === "model" && (
         <div className="card">
-          <h2 className="section-title mb-1">流派版圖（熱門榜 Top50）</h2>
-          <p className="muted mb-3 text-xs">當期各任務流派的席次與 likes 佔比；下圖是佔比隨時間的消長。</p>
+          <h2 className="section-title mb-1">Genre map (Trending Top 50)</h2>
+          <p className="muted mb-3 text-xs">Seats and likes share by task; the chart below tracks shares over time.</p>
           <TaskBars items={taskSlices} totalLikes={taskTotalLikes} />
         </div>
       )}
 
       {kind === "model" && (
         <div className="card">
-          <h2 className="section-title mb-1">流派趨勢（近 7 天，台北時間）</h2>
-          <p className="muted mb-3 text-xs">各流派佔比以首日=100 指數化，只看消長方向（虛線=首日基準）。</p>
+          <h2 className="section-title mb-1">Genre trends (7d, Taipei time)</h2>
+          <p className="muted mb-3 text-xs">Indexed to first-day=100, direction only (dashed = baseline).</p>
           {shareRows.length >= 2 ? (
             <TaskShareChart data={shareRows} series={shareSeries} />
           ) : (
-            <p className="muted">趨勢累積中（task 欄位剛上線，等下幾輪收集才有線）。版圖是即時的，不受影響。</p>
+            <p className="muted">Trends still accumulating (the task column is new). The map above is live.</p>
           )}
         </div>
       )}
@@ -257,7 +257,7 @@ export default async function Page({
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <p className="muted px-5 pb-5">尚無資料，先跑 `npm run collect` 或等 GitHub Actions 收集。</p>}
+        {rows.length === 0 && <p className="muted px-5 pb-5">No data yet. Run `npm run collect` or wait for GitHub Actions.</p>}
       </div>
     </main>
   );

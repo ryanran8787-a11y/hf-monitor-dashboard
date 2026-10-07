@@ -5,7 +5,7 @@ function SkeletonBar({ className }: { className?: string }) {
 
 export default function RootLoading() {
   return (
-    <main className="grid gap-4" aria-busy="true" aria-label="載入中">
+    <main className="grid gap-4" aria-busy="true" aria-label="Loading">
       <div className="card">
         <SkeletonBar className="h-4 w-2/3" />
         <div className="mt-3 flex gap-2">

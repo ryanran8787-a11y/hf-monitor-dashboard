@@ -30,7 +30,7 @@ export default function TaskShareChart({ data, series }: { data: Record<string, 
           <Tooltip
             contentStyle={{ background: c.tipBg, border: `1px solid ${c.tipBd}`, borderRadius: 8, fontSize: 12 }}
             labelStyle={{ color: c.tipTx }}
-            formatter={(v: any) => (v == null ? ["-", ""] : [`${Number(v).toFixed(1)}（首日=100）`, ""])}
+            formatter={(v: any) => (v == null ? ["-", ""] : [`${Number(v).toFixed(1)} (first day = 100)`, ""])}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: c.legend }} />
           <ReferenceLine y={100} stroke={c.grid} strokeDasharray="4 4" />

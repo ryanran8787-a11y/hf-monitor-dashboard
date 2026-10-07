@@ -11,14 +11,14 @@ const KINDS = ["model", "dataset", "space"] as const;
 const SORTS = ["trendingScore", "likes", "downloads", "lastModified"] as const;
 
 function fmtFull(d: Date) {
-  return d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12: false });
+  return d.toLocaleString("en-US", { timeZone: "Asia/Taipei", hour12: false });
 }
 
 function ageText(ms: number) {
   const m = Math.floor(ms / 60000);
-  if (m < 1) return "剛剛更新";
-  if (m < 60) return `${m} 分鐘前更新`;
-  return `${Math.floor(m / 60)} 小時前更新`;
+  if (m < 1) return "Just now";
+  if (m < 60) return `Updated ${m} min ago`;
+  return `Updated ${Math.floor(m / 60)}h ago`;
 }
 
 type Row = { kind: string; hfId: string; likes: number; createdAt: Date };
@@ -35,7 +35,7 @@ export default async function WelcomePage() {
   let pkA = "";
   let pkB = "";
   let pkRows: Record<string, any>[] = [];
-  let pkVerdict = "資料累積中。";
+  let pkVerdict = "Accumulating data.";
 
   try {
     const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
@@ -162,7 +162,7 @@ export default async function WelcomePage() {
       if (overlap.length >= 2) {
         const gA = mA.get(overlap[overlap.length - 1])!.likes - mA.get(overlap[0])!.likes;
         const gB = mB.get(overlap[overlap.length - 1])!.likes - mB.get(overlap[0])!.likes;
-        pkVerdict = gA === gB ? "同期平分秋色。" : `${gA > gB ? pkA : pkB} 暫時領先。`;
+        pkVerdict = gA === gB ? "Evenly matched." : `${gA > gB ? pkA : pkB} Leading for now.`;
       }
     }
   } catch {
@@ -180,17 +180,17 @@ export default async function WelcomePage() {
           <div>
             <span
               className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
-              title={latest ? fmtFull(latest) : "尚無快照"}
+              title={latest ? fmtFull(latest) : "No snapshot yet"}
             >
               <span className={`inline-block h-1.5 w-1.5 rounded-full ${fresh ? "bg-emerald-500" : "bg-amber-500"}`} />
-              {latest ? ageText(Date.now() - latest.getTime()) : "快照累積中"}
+              {latest ? ageText(Date.now() - latest.getTime()) : "Accumulating snapshots"}
             </span>
           </div>
-          <h1 className="text-4xl font-semibold tracking-tighter md:text-5xl">HF 全站熱門，每小時追蹤</h1>
-          <p className="muted max-w-[46ch] text-balance">三大類四種榜單，附歷史曲線與漲幅告警，掛了自己會喊。</p>
+          <h1 className="text-4xl font-semibold tracking-tighter md:text-5xl">Trending across Hugging Face<br />Updated hourly</h1>
+          <p className="muted max-w-[46ch] text-balance">Three categories, four leaderboards, with history curves and spike alerts. It yells on its own when down.</p>
           <div className="flex flex-wrap items-center gap-2">
             <a href="/" className="pill-active !px-6 !py-2 !text-base">
-              進入儀表盤
+              Enter dashboard
             </a>
             <a
               href="https://github.com/ryanran8787-a11y/hf-monitor-dashboard"
@@ -203,13 +203,13 @@ export default async function WelcomePage() {
         </div>
 
         <div className="wcard">
-          <div className="section-title mb-3">本小時漲幅 Top 3</div>
+          <div className="section-title mb-3">Top hourly gainers</div>
           <div className="grid gap-4">
             {KINDS.map((k) => (
               <div key={k}>
                 <div className="muted mb-1 font-mono text-xs">{k}s</div>
                 {(gainers[k] ?? []).length === 0 ? (
-                  <p className="muted text-xs">累積中。</p>
+                  <p className="muted text-xs">Accumulating.</p>
                 ) : (
                   <div className="grid gap-1">
                     {(gainers[k] ?? []).map((g) => (
@@ -238,18 +238,18 @@ export default async function WelcomePage() {
 
       {/* 站內有什麼 */}
       <div>
-        <h2 className="section-title mb-3">站內有什麼</h2>
+        <h2 className="section-title mb-3">What's inside</h2>
         <div className="grid gap-4 md:grid-cols-3">
           <div className="wcard md:col-span-2 md:row-span-2">
-            <div className="section-title mb-1">每小時 12 輪收集</div>
-            <p className="muted mb-4 text-sm">三類別乘四榜單寫入快照，前 20 名留歷史曲線，超閾值 Discord 告警，早上八點還有日報。</p>
+            <div className="section-title mb-1">12 rounds every hour</div>
+            <p className="muted mb-4 text-sm">Three categories times four leaderboards go into snapshots. Top 20 keeps history curves. Discord alerts on spikes, digest at 08:00.</p>
             <div className="grid gap-3">
-              {kindCards.length === 0 && <p className="muted text-xs">快照累積中。</p>}
+              {kindCards.length === 0 && <p className="muted text-xs">Accumulating snapshots.</p>}
               {kindCards.map((c) => (
                 <div key={c.kind} className="grid grid-cols-[86px_1fr] items-center gap-3 sm:grid-cols-[86px_auto_1fr]">
                   <span className="font-mono text-[13px]">{c.kind}s</span>
                   <span className="hidden text-xs tabular-nums sm:block">
-                    本輪 {c.count} 席
+                    {c.count} seats this round
                     {c.deltaPct != null && (
                       <span className={c.deltaPct > 0 ? "text-emerald-600 dark:text-emerald-400" : c.deltaPct < 0 ? "text-rose-600 dark:text-rose-400" : ""}>
                       {` ${c.deltaPct > 0 ? "▲" : c.deltaPct < 0 ? "▼" : ""}${Math.abs(c.deltaPct).toFixed(1)}%`}
@@ -262,7 +262,7 @@ export default async function WelcomePage() {
             </div>
           </div>
           <div className="wcard">
-            <div className="section-title mb-1">雙雄 PK</div>
+            <div className="section-title mb-1">Head-to-head</div>
             {pkRows.length >= 2 ? (
               <>
                 <CompareChartView
@@ -275,16 +275,16 @@ export default async function WelcomePage() {
                 <p className="muted mt-1 text-xs">{pkVerdict}</p>
               </>
             ) : (
-              <p className="muted text-sm">任選兩台比近 7 天成長，自動給出判決。</p>
+              <p className="muted text-sm">Pick any two repos, compare 7d growth, get an automatic verdict.</p>
             )}
           </div>
           <div className="wcard">
-            <div className="section-title mb-1">看門狗</div>
+            <div className="section-title mb-1">Watchdog</div>
             <p className="flex items-center gap-1.5 text-sm">
               <span className={`inline-block h-1.5 w-1.5 rounded-full ${fresh ? "bg-emerald-500" : "bg-amber-500"}`} />
-              {fresh ? "運作中" : "資料陳舊，檢查收集中"}
+              {fresh ? "Running" : "Data stale, checking collection"}
             </p>
-            <p className="muted mt-1 text-xs tabular-nums">最新資料 {latest ? fmtT(latest) : "－"}</p>
+            <p className="muted mt-1 text-xs tabular-nums">Latest data {latest ? fmtT(latest) : "－"}</p>
           </div>
         </div>
       </div>
@@ -292,21 +292,21 @@ export default async function WelcomePage() {
       {/* 統計列 */}
       <div className="wcard flex gap-6 overflow-x-auto !p-0 sm:grid sm:grid-cols-3 sm:gap-0 sm:overflow-visible">
         <div className="min-w-[170px] flex-1 px-4 py-5 text-center">
-          <div className="muted text-xs">歷史筆數</div>
+          <div className="muted text-xs">History rows</div>
           <div className="mt-1 font-mono text-xl tabular-nums sm:text-2xl">
             {histTotal != null ? <CountUp value={histTotal} /> : "－"}
           </div>
           <div className="muted mt-0.5 text-xs tabular-nums">{histDay != null ? `+${histDay.toLocaleString()} / 24h` : ""}</div>
         </div>
         <div className="min-w-[170px] flex-1 border-l border-[var(--line)] px-4 py-5 text-center">
-          <div className="muted text-xs">追蹤中</div>
+          <div className="muted text-xs">Watching</div>
           {watchCount == null ? (
             <div className="mt-1 font-mono text-xl tabular-nums sm:text-2xl">－</div>
           ) : watchCount === 0 ? (
             <div className="mt-1 text-sm">
-              <p className="muted">還沒有追蹤項目</p>
+              <p className="muted">No watched repos yet</p>
               <a className="link" href="/?kind=model">
-                去榜單加入第一個
+                Add your first from the leaderboard
               </a>
             </div>
           ) : (
@@ -314,9 +314,9 @@ export default async function WelcomePage() {
           )}
         </div>
         <div className="min-w-[170px] flex-1 border-l border-[var(--line)] px-4 py-5 text-center">
-          <div className="muted text-xs">最新快照</div>
+          <div className="muted text-xs">Latest snapshot</div>
           <div className="mt-1 font-mono text-xl tabular-nums sm:text-2xl">{latest ? fmtT(latest) : "－"}</div>
-          <div className="muted mt-0.5 text-xs">台北時間</div>
+          <div className="muted mt-0.5 text-xs">Taipei time</div>
         </div>
       </div>
     </main>

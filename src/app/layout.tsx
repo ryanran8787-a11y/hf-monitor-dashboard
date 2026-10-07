@@ -5,13 +5,13 @@ import ThemeToggle from "@/components/ThemeToggle";
 import NavLinks from "@/components/NavLinks";
 
 export const metadata: Metadata = {
-  title: "HF Monitor · Hugging Face 全站熱門儀表盤",
-  description: "追蹤 Hugging Face Models / Datasets / Spaces 熱門趨勢",
+  title: "HF Monitor · Hugging Face trending dashboard",
+  description: "Track trending Models / Datasets / Spaces on Hugging Face",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-Hant">
+    <html lang="en">
       <body>
         {/* 主題初始化：paint 之前先寫好 html.dark，避免閃白 */}
         <script
@@ -41,9 +41,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="mx-auto max-w-6xl px-4 py-5 sm:py-8">
           {children}
           <footer className="muted mt-10 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <div>資料來源: huggingface.co API · 每小時更新</div>
+            <div>Source: huggingface.co API · hourly</div>
             <div className="mt-1 text-xs">
-              <a className="link" href="/welcome">關於本站</a>
+              <a className="link" href="/welcome">About</a>
             </div>
           </footer>
         </div>

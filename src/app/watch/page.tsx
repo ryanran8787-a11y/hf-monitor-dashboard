@@ -6,7 +6,7 @@ import WatchSpark from "@/components/WatchSpark";
 export const revalidate = 600;
 
 function fmtD(d: Date) {
-  return d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit", hour12: false });
+  return d.toLocaleString("en-US", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit", hour12: false });
 }
 
 export default async function WatchPage() {
@@ -16,7 +16,7 @@ export default async function WatchPage() {
   try {
     watches = await db.watch.findMany({ orderBy: { createdAt: "desc" } });
   } catch {
-    loadError = "讀取追蹤清單失敗（可能是 DB 連線問題或 Watch 表尚未建出）。若剛部署，等下一輪收集跑完 db push 再回來看。";
+    loadError = "Failed to load the watchlist (likely a DB connection issue or the Watch table is not created yet). If just deployed, wait for the next collection round to finish db push.";
   }
 
   // 每台近 25h 的點：現價＋24h 變化＋sparkline（一次查完，程式裡分組）
@@ -50,20 +50,20 @@ export default async function WatchPage() {
   return (
     <main className="grid gap-4">
       <div className="card">
-        <h2 className="section-title mb-1">追蹤清單（{watches.length}/50）</h2>
-        <p className="muted mb-3 text-xs">冷門模型也追得：加入後每輪收集會多抓一次，沒進榜也有曲線。取消後歷史保留、只停更。</p>
+        <h2 className="section-title mb-1">Watchlist ({watches.length}/50)</h2>
+        <p className="muted mb-3 text-xs">Obscure repos welcome: each round fetches them once more, so off-chart repos still get curves. Unwatching keeps history, only stops updates.</p>
         <WatchAdder />
       </div>
 
       {loadError ? (
         <div className="card border-l-4 border-l-rose-500 text-sm">{loadError}</div>
       ) : watches.length === 0 ? (
-        <div className="card muted">還沒追蹤任何模型，用上面搜尋框加一台。</div>
+        <div className="card muted">No watched repos yet. Add one with the search box above.</div>
       ) : (
         <div className="card overflow-x-auto !p-0">
           <table className="data min-w-[560px]">
             <thead>
-              <tr><th>ID</th><th className="text-right">Likes</th><th className="text-right">24h 變化</th><th>走勢</th><th>開始追蹤</th><th></th></tr>
+              <tr><th>ID</th><th className="text-right">Likes</th><th className="text-right">24h change</th><th>Trend</th><th>Since</th><th></th></tr>
             </thead>
             <tbody>
               {watches.map((w) => {
@@ -81,7 +81,7 @@ export default async function WatchPage() {
                     <td className={`text-right tabular-nums ${delta != null && delta > 0 ? "text-emerald-600 dark:text-emerald-400" : delta != null && delta < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>
                       {delta != null ? `${delta > 0 ? "+" : ""}${delta.toLocaleString()}` : "-"}
                     </td>
-                    <td>{s ? <WatchSpark points={s.likes.slice(-48)} /> : <span className="muted text-xs">累積中</span>}</td>
+                    <td>{s ? <WatchSpark points={s.likes.slice(-48)} /> : <span className="muted text-xs">Accumulating</span>}</td>
                     <td className="muted whitespace-nowrap tabular-nums">{fmtD(new Date(w.createdAt))}</td>
                     <td><WatchToggle kind={w.kind} hfId={w.hfId} initial={true} /></td>
                   </tr>

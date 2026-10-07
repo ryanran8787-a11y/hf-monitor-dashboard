@@ -84,12 +84,12 @@ export default async function ComparePage({
   const bGrowLikes = growOf(absB);
   const rA = rankKeys.map((t) => rankA.get(t)).filter((v) => v != null) as number[];
   const rB = rankKeys.map((t) => rankB.get(t)).filter((v) => v != null) as number[];
-  let verdict = "資料累積中（兩邊各要 2 筆以上），等收集多跑幾輪再回來看。";
+  let verdict = "Accumulating data (each side needs 2+ points). Check back later.";
   if (aGrowLikes != null && bGrowLikes != null && a !== "" && b !== "" && a !== b) {
-    if (aGrowLikes === bGrowLikes) verdict = "同期平分秋色，兩邊吸粉一樣快。";
+    if (aGrowLikes === bGrowLikes) verdict = "Evenly matched in the same window.";
     else {
       const w = aGrowLikes > bGrowLikes ? a : b;
-      verdict = `${w} 同期多吸 ${Math.abs(aGrowLikes - bGrowLikes).toLocaleString()} 個 likes，暫時領先。`;
+      verdict = `${w} gained ${Math.abs(aGrowLikes - bGrowLikes).toLocaleString()} more likes in the same window. Leading for now.`;
     }
   }
   const summary: Summary = {

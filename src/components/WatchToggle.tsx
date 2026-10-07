@@ -39,11 +39,11 @@ export default function WatchToggle({ kind, hfId, initial }: { kind: string; hfI
         disabled={busy}
         onClick={toggle}
         className={on ? "pill-active" : "pill"}
-        title={on ? "取消追蹤" : "追蹤此模型（每輪收集養曲線）"}
+        title={on ? "Unwatch" : "Watch this repo (refreshed every round)"}
       >
-        {on ? "★ 追蹤中" : "☆ 追蹤"}
+        {on ? "★ Watching" : "☆ Watch"}
       </button>
-      {failed && <span className="text-xs text-rose-600 dark:text-rose-400">操作失敗，再試一次</span>}
+      {failed && <span className="text-xs text-rose-600 dark:text-rose-400">Failed. Try again.</span>}
     </span>
   );
 }

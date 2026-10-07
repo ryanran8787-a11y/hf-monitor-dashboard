@@ -4,9 +4,9 @@ import { usePathname } from "next/navigation";
 
 // 導覽列：當前頁面底線標示，點擊區加大
 const LINKS = [
-  { href: "/", label: "總覽" },
-  { href: "/compare", label: "雙雄 PK" },
-  { href: "/watch", label: "追蹤" },
+  { href: "/", label: "Overview" },
+  { href: "/compare", label: "Compare" },
+  { href: "/watch", label: "Watch" },
 ];
 
 export default function NavLinks() {

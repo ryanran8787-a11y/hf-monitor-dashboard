@@ -15,7 +15,7 @@ export interface AbsMerged {
 }
 
 export function fmtT(d: Date) {
-  return d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  return d.toLocaleString("en-US", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 export function mergeAbsByMinute(hist: AbsHistRow[]): Map<string, AbsMerged> {

@@ -9,16 +9,16 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
   return (
     <main className="grid gap-4">
       <div className="card border-l-4 border-l-rose-500">
-        <h2 className="section-title mb-1">頁面載入失敗</h2>
+        <h2 className="section-title mb-1">Failed to load</h2>
         <p className="muted mb-3 text-sm">
-          可能是資料庫連線問題或上游 API 超時，等一下再試通常就好了。
+          Likely a database connection issue or upstream API timeout. Usually fine on retry.
         </p>
         <div className="flex gap-2">
           <button type="button" onClick={() => reset()} className="pill-active">
-            重試
+            Retry
           </button>
           <a href="/" className="pill">
-            回總覽
+            Back to overview
           </a>
         </div>
       </div>

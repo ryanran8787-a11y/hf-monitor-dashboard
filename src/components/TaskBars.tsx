@@ -6,7 +6,7 @@ export interface TaskSlice {
 }
 
 export default function TaskBars({ items, totalLikes }: { items: TaskSlice[]; totalLikes: number }) {
-  if (items.length === 0 || totalLikes <= 0) return <p className="muted">尚無 task 資料。</p>;
+  if (items.length === 0 || totalLikes <= 0) return <p className="muted">No task data yet.</p>;
   return (
     <div className="grid gap-2">
       {items.map((s) => {
@@ -20,7 +20,7 @@ export default function TaskBars({ items, totalLikes }: { items: TaskSlice[]; to
               <div className="h-full rounded-full bg-sky-600" style={{ width: `${Math.max(pct, 2)}%` }} />
             </div>
             <span className="muted whitespace-nowrap text-xs tabular-nums">
-              {s.count} 席 · {pct.toFixed(1)}%
+              {s.count} seats · {pct.toFixed(1)}%
             </span>
           </div>
         );

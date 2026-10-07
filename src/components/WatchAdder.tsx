@@ -49,15 +49,15 @@ export default function WatchAdder() {
       });
       const j = await r.json();
       if (!r.ok) {
-        setMsg(j.error ?? "加入失敗");
+        setMsg(j.error ?? "Failed to add");
       } else {
-        setMsg(j.existed ? "已經在追蹤了" : `已追蹤 ${hfId}，下輪收集開始養曲線`);
+        setMsg(j.existed ? "Already watching" : `Watching ${hfId}. History starts next round.`);
         setQ("");
         setHits([]);
         router.refresh();
       }
     } catch {
-      setMsg("加入失敗");
+      setMsg("Failed to add");
     }
     setBusy(false);
   }
@@ -74,7 +74,7 @@ export default function WatchAdder() {
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="輸入名稱搜尋 HF（至少 2 字）…"
+        placeholder="Search HF by name (min 2 chars)…"
         className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
       />
       {hits.length > 0 && (
@@ -90,14 +90,14 @@ export default function WatchAdder() {
                   onClick={() => add(h.hfId)}
                   className="rounded-md bg-zinc-900 px-2 py-0.5 text-xs text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
                 >
-                  追蹤
+                  Watch
                 </button>
               </span>
             </div>
           ))}
         </div>
       )}
-      {searching && <p className="muted mt-1 text-xs">搜尋中…</p>}
+      {searching && <p className="muted mt-1 text-xs">Searching…</p>}
       {msg && <p className="muted mt-1 text-xs">{msg}</p>}
     </div>
   );
