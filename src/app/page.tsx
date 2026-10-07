@@ -190,7 +190,7 @@ export default async function Page({
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="card">
-          <div className="muted">追蹤項目</div>
+          <div className="muted">榜單筆數</div>
           <div className="stat-num mt-1">{rows.length}</div>
         </div>
         <div className="card">

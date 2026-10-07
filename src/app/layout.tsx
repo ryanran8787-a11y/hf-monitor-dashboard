@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/lib/theme";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
-  title: "HF Monitor — Hugging Face 全站熱門儀表盤",
+  title: "HF Monitor · Hugging Face 全站熱門儀表盤",
   description: "追蹤 Hugging Face Models / Datasets / Spaces 熱門趨勢",
 };
 
