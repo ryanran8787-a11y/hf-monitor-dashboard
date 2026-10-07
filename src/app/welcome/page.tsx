@@ -1,97 +1,323 @@
 import { db } from "@/lib/db";
+import { mergeAbsByMinute, fmtT } from "@/lib/absMerge";
+import WatchSpark from "@/components/WatchSpark";
+import CountUp from "@/components/CountUp";
+import { A_COLOR, B_COLOR } from "@/components/CompareClient";
+import CompareChartView from "@/components/CompareChart";
 
 export const revalidate = 600;
 
-function fmtT(d: Date) {
-  return d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+const KINDS = ["model", "dataset", "space"] as const;
+const SORTS = ["trendingScore", "likes", "downloads", "lastModified"] as const;
+
+function fmtFull(d: Date) {
+  return d.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12: false });
 }
 
-// 玩票 showcase 頁：純展示，不擋 `/`，數字全是活的（讀 DB），壞了就顯示 －
+function ageText(ms: number) {
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "剛剛更新";
+  if (m < 60) return `${m} 分鐘前更新`;
+  return `${Math.floor(m / 60)} 小時前更新`;
+}
+
+type Row = { kind: string; hfId: string; likes: number; createdAt: Date };
+
+// 玩票 showcase 頁：純展示，不擋 `/`；數字全是活的，壞了顯示 －
 export default async function WelcomePage() {
-  let histCount: number | null = null;
-  let watchCount: number | null = null;
   let latest: Date | null = null;
-  let kinds: { kind: string; n: number }[] = [];
+  let alive = new Set<string>();
+  let histTotal: number | null = null;
+  let histDay: number | null = null;
+  let watchCount: number | null = null;
+  let gainers: Record<string, { hfId: string; pct: number | null; grow: number; pts: number[] }[]> = {};
+  let kindCards: { kind: string; count: number; deltaPct: number | null; pts: number[] }[] = [];
+  let pkA = "";
+  let pkB = "";
+  let pkRows: Record<string, any>[] = [];
+  let pkVerdict = "資料累積中。";
+
   try {
-    const [h, w, s, g] = await Promise.all([
-      db.metricHistory.count(),
-      db.watch.count(),
+    const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
+    const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+    const [s, snap, hTotal, hDay, wCount] = await Promise.all([
       db.snapshot.findFirst({ orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
-      db.snapshot.groupBy({ by: ["kind"], _count: { _all: true } }),
+      db.snapshot.findMany({
+        where: { createdAt: { gte: new Date(Date.now() - 2 * 3600 * 1000) } },
+        select: { kind: true, sortBy: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 1500,
+      }),
+      db.metricHistory.count(),
+      db.metricHistory.count({ where: { createdAt: { gte: dayAgo } } }),
+      db.watch.count(),
     ]);
-    histCount = h;
-    watchCount = w;
     latest = s ? new Date(s.createdAt) : null;
-    kinds = g.map((x) => ({ kind: x.kind, n: (x._count as any)?._all ?? 0 }));
+    histTotal = hTotal;
+    histDay = hDay;
+    watchCount = wCount;
+    if (snap.length > 0) {
+      const top = new Date(snap[0].createdAt).getTime();
+      for (const r of snap) {
+        if (top - new Date(r.createdAt).getTime() > 3 * 60 * 1000) break;
+        alive.add(`${r.kind}/${r.sortBy}`);
+      }
+    }
+
+    // 各類別 24h 漲幅 Top3（同 repo 取首尾，附 sparkline）
+    const day = (await db.metricHistory
+      .findMany({
+        where: { createdAt: { gte: new Date(Date.now() - 25 * 3600 * 1000) } },
+        select: { kind: true, hfId: true, likes: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+        take: 20000,
+      })
+      .catch(() => [])) as Row[];
+    const byRepo = new Map<string, { kind: string; hfId: string; first: number; last: number; pts: number[] }>();
+    for (const h of day) {
+      const k = `${h.kind}/${h.hfId}`;
+      let e = byRepo.get(k);
+      if (!e) {
+        e = { kind: h.kind, hfId: h.hfId, first: h.likes, last: h.likes, pts: [] };
+        byRepo.set(k, e);
+      }
+      e.last = h.likes;
+      e.pts.push(h.likes);
+    }
+    for (const k of KINDS) {
+      gainers[k] = Array.from(byRepo.values())
+        .filter((e) => e.kind === k && e.pts.length >= 2 && e.first > 0)
+        .map((e) => ({
+          hfId: e.hfId,
+          grow: e.last - e.first,
+          pct: ((e.last - e.first) / e.first) * 100,
+          pts: e.pts.slice(-24),
+        }))
+        .sort((x, y) => y.pct! - x.pct!)
+        .slice(0, 3);
+    }
+
+    // 各類別：本輪收錄數、較上一輪變化、7 天迷你曲線（只吃熱門榜，避免四榜重複計數）
+    const week = (await db.metricHistory
+      .findMany({
+        where: { kind: { in: [...KINDS] }, sortBy: "trendingScore", createdAt: { gte: weekAgo } },
+        select: { kind: true, likes: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+        take: 20000,
+      })
+      .catch(() => [])) as { kind: string; likes: number; createdAt: Date }[];
+    const rounds = new Map<string, { time: number; byKind: Map<string, { n: number; likes: number }> }>();
+    for (const h of week) {
+      const key = fmtT(new Date(h.createdAt));
+      let r = rounds.get(key);
+      if (!r) {
+        r = { time: new Date(h.createdAt).getTime(), byKind: new Map() };
+        rounds.set(key, r);
+      }
+      const e = r.byKind.get(h.kind) || { n: 0, likes: 0 };
+      e.n += 1;
+      e.likes += h.likes ?? 0;
+      r.byKind.set(h.kind, e);
+    }
+    const ordered = Array.from(rounds.values()).sort((x, y) => x.time - y.time);
+    kindCards = KINDS.map((k) => {
+      const lastR = ordered[ordered.length - 1]?.byKind.get(k);
+      const prevR = ordered[ordered.length - 2]?.byKind.get(k);
+      const deltaPct =
+        lastR && prevR && prevR.likes > 0 ? ((lastR.likes - prevR.likes) / prevR.likes) * 100 : null;
+      return {
+        kind: k,
+        count: lastR?.n ?? 0,
+        deltaPct,
+        pts: ordered.map((r) => r.byKind.get(k)?.likes ?? 0).slice(-48),
+      };
+    }).filter((c) => c.pts.some((v) => v > 0));
+
+    // PK 示意：本輪 models 按 likes 取前二，畫真實 7 天對比
+    const top2 = await db.snapshot
+      .findMany({ where: { kind: "model" }, orderBy: [{ createdAt: "desc" }, { likes: "desc" }], take: 2 })
+      .catch(() => []);
+    if (top2.length === 2) {
+      pkA = top2[0].hfId;
+      pkB = top2[1].hfId;
+      const [hA, hB] = await Promise.all([
+        db.metricHistory
+          .findMany({ where: { kind: "model", hfId: pkA, createdAt: { gte: weekAgo } }, orderBy: { createdAt: "asc" }, take: 2000 })
+          .catch(() => []),
+        db.metricHistory
+          .findMany({ where: { kind: "model", hfId: pkB, createdAt: { gte: weekAgo } }, orderBy: { createdAt: "asc" }, take: 2000 })
+          .catch(() => []),
+      ]);
+      const mA = mergeAbsByMinute(hA as any);
+      const mB = mergeAbsByMinute(hB as any);
+      const times = new Map<string, number>();
+      for (const [k, v] of Array.from(mA.entries()).concat(Array.from(mB.entries()))) {
+        if (!times.has(k)) times.set(k, v.time);
+      }
+      const keys = Array.from(times.entries())
+        .sort((x, y) => x[1] - y[1])
+        .map(([t]) => t);
+      pkRows = keys.map((t) => ({ t, a: mA.get(t)?.likes ?? null, b: mB.get(t)?.likes ?? null }));
+      const overlap = keys.filter((t) => mA.get(t) != null && mB.get(t) != null);
+      if (overlap.length >= 2) {
+        const gA = mA.get(overlap[overlap.length - 1])!.likes - mA.get(overlap[0])!.likes;
+        const gB = mB.get(overlap[overlap.length - 1])!.likes - mB.get(overlap[0])!.likes;
+        pkVerdict = gA === gB ? "同期平分秋色。" : `${gA > gB ? pkA : pkB} 暫時領先。`;
+      }
+    }
   } catch {
     // 數字拿不到就顯示 －，頁面照常
   }
-  const maxKind = Math.max(1, ...kinds.map((k) => k.n));
 
-  const stats = [
-    { label: "歷史筆數", value: histCount != null ? histCount.toLocaleString() : "－" },
-    { label: "追蹤中", value: watchCount != null ? `${watchCount}/50` : "－" },
-    { label: "最新快照", value: latest ? fmtT(latest) : "－" },
-  ];
+  const ageH = latest ? (Date.now() - latest.getTime()) / 3600000 : Infinity;
+  const fresh = ageH <= 2;
 
   return (
     <main className="grid gap-6">
-      <div className="rise grid gap-4 py-6 text-center sm:py-10">
-        <h1 className="text-4xl font-semibold tracking-tighter md:text-5xl">
-          HF 全站熱門
-          <br />
-          每小時追蹤
-        </h1>
-        <p className="muted mx-auto max-w-[52ch]">Models、Datasets、Spaces 三大類，四種榜單，附歷史曲線與漲幅告警。</p>
-        <div>
-          <a href="/" className="pill-active !px-6 !py-2 !text-base">
-            進入儀表盤
-          </a>
-          <div className="mt-3 text-xs">
-            <a className="link muted" href="https://github.com/ryanran8787-a11y/hf-monitor-dashboard" target="_blank">
-              GitHub 原始碼
+      {/* Hero：左文右圖 */}
+      <div className="grid items-center gap-6 md:grid-cols-2">
+        <div className="grid gap-4">
+          <div>
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
+              title={latest ? fmtFull(latest) : "尚無快照"}
+            >
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${fresh ? "bg-emerald-500" : "bg-amber-500"}`} />
+              {latest ? ageText(Date.now() - latest.getTime()) : "快照累積中"}
+            </span>
+          </div>
+          <h1 className="text-4xl font-semibold tracking-tighter md:text-5xl">HF 全站熱門，每小時追蹤</h1>
+          <p className="muted max-w-[46ch] text-balance">三大類四種榜單，附歷史曲線與漲幅告警，掛了自己會喊。</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <a href="/" className="pill-active !px-6 !py-2 !text-base">
+              進入儀表盤
+            </a>
+            <a
+              href="https://github.com/ryanran8787-a11y/hf-monitor-dashboard"
+              target="_blank"
+              className="pill !px-6 !py-2 !text-base"
+            >
+              GitHub
             </a>
           </div>
         </div>
-      </div>
 
-      <div>
-        <h2 className="section-title mb-3">站內有什麼</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="card rise-d1 md:col-span-2 md:row-span-2">
-            <div className="section-title mb-1">每小時 12 輪收集</div>
-            <p className="muted mb-4 text-sm">三類別乘四榜單寫入快照，前 20 名留歷史曲線，超閾值 Discord 告警，早上八點還有日報。</p>
-            <div className="grid gap-2">
-              {kinds.map((k) => (
-                <div key={k.kind} className="grid grid-cols-[90px_1fr_auto] items-center gap-2">
-                  <span className="font-mono text-[13px]">{k.kind}s</span>
-                  <div className="h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                    <div className="h-full rounded-full bg-sky-600" style={{ width: `${Math.max((k.n / maxKind) * 100, 2)}%` }} />
+        <div className="wcard">
+          <div className="section-title mb-3">本小時漲幅 Top 3</div>
+          <div className="grid gap-4">
+            {KINDS.map((k) => (
+              <div key={k}>
+                <div className="muted mb-1 font-mono text-xs">{k}s</div>
+                {(gainers[k] ?? []).length === 0 ? (
+                  <p className="muted text-xs">累積中。</p>
+                ) : (
+                  <div className="grid gap-1">
+                    {(gainers[k] ?? []).map((g) => (
+                      <div key={g.hfId} className="flex items-center gap-2 text-[13px]">
+                        <span className="min-w-0 flex-1 truncate font-mono" title={g.hfId}>
+                          {g.hfId}
+                        </span>
+                        <WatchSpark points={g.pts} animate />
+                        <span
+                          className={`w-16 shrink-0 text-right tabular-nums ${
+                            g.pct! > 0 ? "text-emerald-600 dark:text-emerald-400" : g.pct! < 0 ? "text-rose-600 dark:text-rose-400" : ""
+                          }`}
+                        >
+                          {g.pct! > 0 ? "+" : ""}
+                          {g.pct!.toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <span className="muted text-xs tabular-nums">{k.n.toLocaleString()}</span>
-                </div>
-              ))}
-              {kinds.length === 0 && <p className="muted text-xs">快照累積中。</p>}
-            </div>
-          </div>
-          <div className="card rise-d1">
-            <div className="section-title mb-1">雙雄 PK</div>
-            <p className="muted text-sm">任選兩台比近 7 天成長，自動給出判決。</p>
-          </div>
-          <div className="card rise-d2">
-            <div className="section-title mb-1">看門狗</div>
-            <p className="muted text-sm">斷收超過 3 小時自己喊，不用人盯。</p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="card rise-d2 grid grid-cols-3 divide-x divide-zinc-200 !p-0 dark:divide-zinc-800">
-        {stats.map((s) => (
-          <div key={s.label} className="px-2 py-5 text-center sm:px-4">
-            <div className="muted text-xs">{s.label}</div>
-            <div className="mt-1 font-mono text-base tabular-nums sm:text-xl">{s.value}</div>
+      {/* 站內有什麼 */}
+      <div>
+        <h2 className="section-title mb-3">站內有什麼</h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="wcard md:col-span-2 md:row-span-2">
+            <div className="section-title mb-1">每小時 12 輪收集</div>
+            <p className="muted mb-4 text-sm">三類別乘四榜單寫入快照，前 20 名留歷史曲線，超閾值 Discord 告警，早上八點還有日報。</p>
+            <div className="grid gap-3">
+              {kindCards.length === 0 && <p className="muted text-xs">快照累積中。</p>}
+              {kindCards.map((c) => (
+                <div key={c.kind} className="grid grid-cols-[86px_1fr] items-center gap-3 sm:grid-cols-[86px_auto_1fr]">
+                  <span className="font-mono text-[13px]">{c.kind}s</span>
+                  <span className="hidden text-xs tabular-nums sm:block">
+                    本輪 {c.count} 席
+                    {c.deltaPct != null && (
+                      <span className={c.deltaPct > 0 ? "text-emerald-600 dark:text-emerald-400" : c.deltaPct < 0 ? "text-rose-600 dark:text-rose-400" : ""}>
+                      {` ${c.deltaPct > 0 ? "▲" : c.deltaPct < 0 ? "▼" : ""}${Math.abs(c.deltaPct).toFixed(1)}%`}
+                      </span>
+                    )}
+                  </span>
+                  <WatchSpark points={c.pts} animate />
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
+          <div className="wcard">
+            <div className="section-title mb-1">雙雄 PK</div>
+            {pkRows.length >= 2 ? (
+              <>
+                <CompareChartView
+                  data={pkRows}
+                  series={[
+                    { key: "a", label: pkA, color: A_COLOR },
+                    { key: "b", label: pkB, color: B_COLOR },
+                  ]}
+                />
+                <p className="muted mt-1 text-xs">{pkVerdict}</p>
+              </>
+            ) : (
+              <p className="muted text-sm">任選兩台比近 7 天成長，自動給出判決。</p>
+            )}
+          </div>
+          <div className="wcard">
+            <div className="section-title mb-1">看門狗</div>
+            <p className="flex items-center gap-1.5 text-sm">
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${fresh ? "bg-emerald-500" : "bg-amber-500"}`} />
+              {fresh ? "運作中" : "資料陳舊，檢查收集中"}
+            </p>
+            <p className="muted mt-1 text-xs tabular-nums">最新資料 {latest ? fmtT(latest) : "－"}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 統計列 */}
+      <div className="wcard flex gap-6 overflow-x-auto !p-0 sm:grid sm:grid-cols-3 sm:gap-0 sm:overflow-visible">
+        <div className="min-w-[170px] flex-1 px-4 py-5 text-center">
+          <div className="muted text-xs">歷史筆數</div>
+          <div className="mt-1 font-mono text-xl tabular-nums sm:text-2xl">
+            {histTotal != null ? <CountUp value={histTotal} /> : "－"}
+          </div>
+          <div className="muted mt-0.5 text-xs tabular-nums">{histDay != null ? `+${histDay.toLocaleString()} / 24h` : ""}</div>
+        </div>
+        <div className="min-w-[170px] flex-1 border-l border-[var(--line)] px-4 py-5 text-center">
+          <div className="muted text-xs">追蹤中</div>
+          {watchCount == null ? (
+            <div className="mt-1 font-mono text-xl tabular-nums sm:text-2xl">－</div>
+          ) : watchCount === 0 ? (
+            <div className="mt-1 text-sm">
+              <p className="muted">還沒有追蹤項目</p>
+              <a className="link" href="/?kind=model">
+                去榜單加入第一個
+              </a>
+            </div>
+          ) : (
+            <div className="mt-1 font-mono text-xl tabular-nums sm:text-2xl">{watchCount}/50</div>
+          )}
+        </div>
+        <div className="min-w-[170px] flex-1 border-l border-[var(--line)] px-4 py-5 text-center">
+          <div className="muted text-xs">最新快照</div>
+          <div className="mt-1 font-mono text-xl tabular-nums sm:text-2xl">{latest ? fmtT(latest) : "－"}</div>
+          <div className="muted mt-0.5 text-xs">台北時間</div>
+        </div>
       </div>
     </main>
   );

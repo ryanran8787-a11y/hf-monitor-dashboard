@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/lib/theme";
 import ThemeToggle from "@/components/ThemeToggle";
+import NavLinks from "@/components/NavLinks";
 
 export const metadata: Metadata = {
   title: "HF Monitor · Hugging Face 全站熱門儀表盤",
@@ -31,11 +32,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </span>
               <span className="hidden min-[380px]:inline">HF Monitor</span>
             </a>
-            <nav className="flex items-center gap-2.5 text-[13px] text-zinc-500 sm:gap-4 sm:text-sm dark:text-zinc-400">
-              <a className="hover:text-zinc-900 dark:hover:text-white" href="/">總覽</a>
-              <a className="hover:text-zinc-900 dark:hover:text-white" href="/compare">雙雄PK</a>
-              <a className="hover:text-zinc-900 dark:hover:text-white" href="/watch">追蹤</a>
-              <a className="hover:text-zinc-900 dark:hover:text-white" href="https://huggingface.co/models" target="_blank">HF Hub ↗</a>
+            <nav className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
+              <NavLinks />
               <ThemeToggle />
             </nav>
           </div>

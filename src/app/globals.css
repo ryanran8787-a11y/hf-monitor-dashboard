@@ -17,12 +17,45 @@ a.link { @apply text-blue-600 hover:underline; }
 .section-title { @apply text-sm font-semibold tracking-tight; }
 .stat-num { @apply text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums; }
 
-/* 玩票 /welcome 進場：淡入上浮，stagger 用 rise-d1/d2；省電模式直接靜態 */
-@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-.rise { animation: rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.rise-d1 { animation: rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both; }
-.rise-d2 { animation: rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both; }
-@media (prefers-reduced-motion: reduce) { .rise, .rise-d1, .rise-d2 { animation: none; } }
+/* 視覺系統變數：背景三層 + 主色 + 漲跌 + 文字三級（welcome 玩票頁用） */
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --raised: #f4f4f5;
+  --line: rgb(0 0 0 / 0.08);
+  --accent: #0284c7;
+  --up: #059669;
+  --down: #e11d48;
+  --tx1: #18181b;
+  --tx2: #52525b;
+  --tx3: #a1a1aa;
+}
+.dark {
+  --bg: #09090b;
+  --surface: #131316;
+  --raised: #1c1c21;
+  --line: rgb(255 255 255 / 0.08);
+  --accent: #38bdf8;
+  --up: #34d399;
+  --down: #fb7185;
+  --tx1: #f4f4f5;
+  --tx2: #a1a1aa;
+  --tx3: #63636b;
+}
+/* 變數卡片：1px 半透明線，hover 微亮，無大陰影 */
+.wcard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.wcard:hover { background: var(--raised); }
+
+/* sparkline 描繪動畫；省電模式靜態 */
+.spark-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 0.8s ease forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .spark-draw { animation: none; stroke-dashoffset: 0; } }
 
 /* 深色模式：html.dark 由 header 切換鈕控制，localStorage 記憶，預設跟系統 */
 .dark { color-scheme: dark; }
