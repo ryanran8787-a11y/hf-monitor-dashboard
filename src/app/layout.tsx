@@ -42,7 +42,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <div className="mx-auto max-w-6xl px-4 py-5 sm:py-8">
           {children}
-          <footer className="muted mt-10 border-t border-zinc-200 pt-4 dark:border-zinc-800">資料來源: huggingface.co API · 每小時更新</footer>
+          <footer className="muted mt-10 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+            <div>資料來源: huggingface.co API · 每小時更新</div>
+            <div className="mt-1 text-xs">
+              <a className="link" href="/welcome">關於本站</a>
+            </div>
+          </footer>
         </div>
         </ThemeProvider>
       </body>

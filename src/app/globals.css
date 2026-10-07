@@ -17,6 +17,13 @@ a.link { @apply text-blue-600 hover:underline; }
 .section-title { @apply text-sm font-semibold tracking-tight; }
 .stat-num { @apply text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums; }
 
+/* 玩票 /welcome 進場：淡入上浮，stagger 用 rise-d1/d2；省電模式直接靜態 */
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.rise-d1 { animation: rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both; }
+.rise-d2 { animation: rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both; }
+@media (prefers-reduced-motion: reduce) { .rise, .rise-d1, .rise-d2 { animation: none; } }
+
 /* 深色模式：html.dark 由 header 切換鈕控制，localStorage 記憶，預設跟系統 */
 .dark { color-scheme: dark; }
 .dark body { @apply bg-zinc-950 text-zinc-100; }
