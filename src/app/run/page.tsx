@@ -1,4 +1,5 @@
 import { fetchOne } from "@/lib/hf";
+import CopyBtn from "@/components/CopyBtn";
 import {
   searchRepos,
   fetchRepoTree,
@@ -42,6 +43,7 @@ interface VariantRow {
   uncensored: boolean;
   file: string;
   path: string;
+  parts: number;
   quant: string;
   bytes: number;
 }
@@ -126,6 +128,7 @@ export default async function RunPage({ searchParams }: { searchParams: { q?: st
                 uncensored: cls.uncensored,
                 file: g.count > 1 ? `${g.sample} +${g.count - 1} more` : g.sample,
                 path: g.full,
+                parts: g.count,
                 quant: g.quant,
                 bytes: g.bytes,
               });
@@ -196,6 +199,7 @@ export default async function RunPage({ searchParams }: { searchParams: { q?: st
                   <th className="text-right">Size</th>
                   <th className="text-right">Est. RAM</th>
                   <th>Fits phone / laptop / desktop</th>
+                  <th>Cmd</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,6 +235,15 @@ export default async function RunPage({ searchParams }: { searchParams: { q?: st
                       <td className="text-right tabular-nums">~{ram.toFixed(1)} GB</td>
                       <td>
                         <Lamps ram={ram} />
+                      </td>
+                      <td>
+                        <CopyBtn
+                          text={
+                            r.parts > 1
+                              ? `huggingface-cli download ${r.repo}`
+                              : `huggingface-cli download ${r.repo} ${r.path}`
+                          }
+                        />
                       </td>
                     </tr>
                   );
