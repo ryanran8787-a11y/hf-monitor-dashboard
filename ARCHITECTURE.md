@@ -26,6 +26,7 @@
 8. 深色模式：Tailwind `class` 模式＋`globals.css` 集中覆蓋（`.card/.pill/.muted/table/link`）；`ThemeProvider`（`src/lib/theme.tsx`）管狀態＋localStorage＋跟系統；layout 內嵌 paint 前腳本防閃白；五張圖表經 `chartTheme()` 換裝潢色，系列色兩邊通用
 9. 看門狗：`watchdog.yml` 每小時 :37 查最新 `MetricHistory`，超 `WATCHDOG_MAX_AGE_HOURS`（預設 3h）沒新資料就 Discord 告警；`WatchdogState` 節流，`WATCHDOG_RESEND_HOURS`（預設 12h）內不重發；沒設 webhook 則 job 直接失敗（靠 Actions 通知兜底）
 10. `/welcome` 玩票 showcase：純靜態展示頁（hero＋不對稱 bento＋活數字條），數字全讀 DB，壞了顯示 －；footer 連結進入，不擋 `/`
+11. `/run` 可跑版本工具：搜任意 model → 候選 repo 打 tree API → 正則抓 GGUF 量化標籤＋精確體積 → RAM 三燈號（8GB 手機/16GB 筆電/32GB 桌機）；唯讀不寫庫，`revalidate: 3600` 省配額；uncensored 只認名/tag（未驗證）；詳情頁連入
 4. `MetricHistory` 只留 30 天（collector 每輪順手清；它是唯一無限增長的表，90 天穩態約 60 萬行，30 天約 18 萬行）
 
 ## 已知限制

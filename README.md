@@ -17,6 +17,7 @@ Tracks trending activity across Hugging Face every hour: Models / Datasets / Spa
 - **Dark mode** — follows the system, manually switchable
 - **Mobile** — responsive tables with horizontal scroll, loading skeletons, one-tap retry
 - **About page** — `/welcome` showcase (hero, highlights, live numbers) for the curious
+- **Runnable variants** — `/run`: search any model, list GGUF variants with exact sizes plus RAM fit lights (8GB phone / 16GB laptop / 32GB desktop). Read-only, nothing stored
 
 ## Stack
 
@@ -68,8 +69,9 @@ src/lib/absMerge.ts        shared same-minute merge across boards (likes first)
 src/app/page.tsx           overview + genre analysis
 src/app/compare/page.tsx   head-to-head
 src/app/watch/page.tsx     watchlist
-src/app/model/[...id]/     repo details
+src/app/model/[...id]/     repo details (links to /run for models)
 src/app/welcome/page.tsx   showcase page
+src/app/run/page.tsx       runnable-variant finder (GGUF + RAM lights, read-only)
 src/app/loading.tsx        global loading skeleton
 src/app/error.tsx          global error boundary (one-tap retry)
 src/app/api/               trending / watch / hf-search

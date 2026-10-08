@@ -82,6 +82,11 @@ export default async function ModelPage({
           {live?.pipeline_tag && <span>task: {live.pipeline_tag}</span>}
           {live?.library_name && <span>lib: {live.library_name}</span>}
           <a className="link" href={hfUrl(kind, hfId)} target="_blank">HF Hub ↗</a>
+          {kind === "model" && (
+            <a className="link" href={`/run?q=${encodeURIComponent(hfId)}`}>
+              Find runnable variants →
+            </a>
+          )}
           <WatchToggle kind={kind} hfId={hfId} initial={!!watched} />
         </div>
       </div>

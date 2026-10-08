@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "Overview" },
   { href: "/compare", label: "Compare" },
   { href: "/watch", label: "Watch" },
+  { href: "/run", label: "Run" },
 ];
 
 export default function NavLinks() {
