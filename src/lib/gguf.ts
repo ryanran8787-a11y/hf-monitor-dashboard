@@ -27,9 +27,12 @@ export function findGgufFiles(entries: TreeEntry[]): GgufFile[] {
   const out: GgufFile[] = [];
   for (const e of entries) {
     if (e.type !== "file" || typeof e.size !== "number") continue;
+    const base = e.path.split("/").pop() ?? e.path;
+    // mmproj-*.gguf 是視覺投影邊角料（幾百 MB），不是 LLM 權重，會污染排序，直接丟
+    if (/^mmproj/i.test(base)) continue;
     const q = parseQuantTag(e.path);
     if (!q) continue;
-    out.push({ name: e.path.split("/").pop() ?? e.path, quant: q, bytes: e.size });
+    out.push({ name: base, quant: q, bytes: e.size });
   }
   return out.sort((a, b) => a.bytes - b.bytes);
 }
