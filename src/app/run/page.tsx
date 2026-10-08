@@ -24,7 +24,8 @@ const DEVICES = [
 ];
 
 function parseParamsFromName(hfId: string): number | null {
-  const m = hfId.match(/(\d+(?:\.\d+)?)\s*B\b/i);
+  // 只認結尾附近的數字+B（Qwen3-8B、gpt-oss-20b）；Qwen3 這種中間數字不算
+  const m = hfId.match(/[-_ ](\d+(?:\.\d+)?)[Bb](?:[-_.]|$)/);
   if (!m) return null;
   const b = Number(m[1]);
   return b > 0 && b < 1000 ? b * 1e9 : null;
@@ -148,8 +149,9 @@ export default async function RunPage({ searchParams }: { searchParams: { q?: st
       rows.sort((a, b) => a.bytes - b.bytes);
       weights.sort((a, b) => a.bytes - b.bytes);
 
-      // 參數總量：本尊優先，否則第一個有名堂的候選；缺失的檔位用估算補上（標 ~）
-      paramsNote = cands.find((c) => c.params != null)?.params ?? null;
+      // 參數總量：完整 repo id 命中優先，否則第一個有名堂的候選；估算只掛在它名下
+      const exactHit = q.includes("/") ? cands.find((c) => c.hfId.toLowerCase() === q.toLowerCase()) : undefined;
+      paramsNote = exactHit?.params ?? cands.find((c) => c.params != null)?.params ?? null;
       if (paramsNote != null) {
         const have = new Set(rows.map((r) => r.quant.toUpperCase()));
         for (const quant of ["F16", "Q8_0", "Q4_K_M"]) {
@@ -206,7 +208,7 @@ export default async function RunPage({ searchParams }: { searchParams: { q?: st
                 {rows.map((r, i) => {
                   const ram = ramGb(r.bytes);
                   return (
-                    <tr key={`${r.repo}/${r.file}`}>
+                    <tr key={`${r.repo}/${r.quant}/${i}`}>
                       <td className="font-mono text-[13px]">
                         <a className="link" href={`/model/${r.repo}?kind=model`}>
                           {r.repo}

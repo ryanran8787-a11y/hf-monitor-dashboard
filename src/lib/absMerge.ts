@@ -24,7 +24,8 @@ export function mergeAbsByMinute(hist: AbsHistRow[]): Map<string, AbsMerged> {
     const at = new Date(h.createdAt);
     const k = fmtT(at);
     const cur = m.get(k);
-    if (!cur || (cur.sortBy !== "likes" && h.sortBy === "likes")) {
+    // likes 優先升級；同優先級後寫覆蓋（輸入按時間升序＝留最新）
+    if (!cur || (cur.sortBy !== "likes" && h.sortBy === "likes") || cur.sortBy === h.sortBy) {
       m.set(k, { likes: h.likes, downloads: h.downloads, time: at.getTime(), sortBy: h.sortBy });
     }
   }

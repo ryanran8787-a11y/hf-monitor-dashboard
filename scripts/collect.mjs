@@ -46,6 +46,8 @@ async function discord(text) {
 }
 
 const t0 = Date.now();
+// 本輪統一時間戳：同榜快照＋歷史共用一批戳，讀端才能按輪切分（否則 DB now() 毫秒散開）
+const batchTime = new Date();
 const kinds = ["model", "dataset", "space"];
 const sorts = ["likes", "downloads", "trendingScore", "lastModified"];
 
@@ -69,7 +71,7 @@ for (const kind of kinds) {
           task: x.pipeline_tag ?? null, tags: JSON.stringify(x.tags ?? []),
           // 列表 API 只有 createdAt，詳情才有 lastModified
           lastModified: x.lastModified ?? x.last_modified ?? x.createdAt ?? null,
-          rank: i + 1, sortBy: sort,
+          rank: i + 1, sortBy: sort, createdAt: batchTime,
         })),
       });
       return { kind, sort, items };
@@ -89,7 +91,7 @@ const histRows = [];
 for (const r of rounds) {
   r.items.slice(0, TOP_N).forEach((x, i) => {
     const hfId = x.id ?? x.name;
-    histRows.push({ kind: r.kind, hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0, rank: i + 1, sortBy: r.sort, task: x.pipeline_tag ?? null });
+    histRows.push({ kind: r.kind, hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0, rank: i + 1, sortBy: r.sort, task: x.pipeline_tag ?? null, createdAt: batchTime });
     const key = `${r.kind}/${hfId}`;
     if (!seen.has(key)) {
       seen.set(key, { kind: r.kind, hfId, likes: x.likes ?? 0, downloads: x.downloads ?? 0 });
@@ -121,13 +123,15 @@ for (const c of cur) {
   }
   const dlGrow = c.downloads - prev.downloads;
   const likeGrow = c.likes - prev.likes;
-  const dlPct = prev.downloads > 0 ? (dlGrow / prev.downloads) * 100 : 0;
-  const likePct = prev.likes > 0 ? (likeGrow / prev.likes) * 100 : 0;
+  // 基準為 0 又突破增量下限：分母無意義，直接視為無窮大（告警＋文案標 new）
+  const dlPct = prev.downloads > 0 ? (dlGrow / prev.downloads) * 100 : dlGrow >= MIN_DL ? Infinity : 0;
+  const likePct = prev.likes > 0 ? (likeGrow / prev.likes) * 100 : likeGrow >= MIN_LIKES ? Infinity : 0;
+  const pctText = (p) => (Number.isFinite(p) ? `${p.toFixed(0)}%` : "new");
   if ((dlGrow >= MIN_DL && dlPct >= PCT) || (likeGrow >= MIN_LIKES && likePct >= PCT)) {
     if (alerts.length < MAX_ALERTS) {
       const parts = [];
-      if (dlGrow >= MIN_DL && dlPct >= PCT) parts.push(`⬇ +${dlGrow.toLocaleString()} (${dlPct.toFixed(0)}%)`);
-      if (likeGrow >= MIN_LIKES && likePct >= PCT) parts.push(`👍 +${likeGrow} (${likePct.toFixed(0)}%)`);
+      if (dlGrow >= MIN_DL && dlPct >= PCT) parts.push(`⬇ +${dlGrow.toLocaleString()} (${pctText(dlPct)})`);
+      if (likeGrow >= MIN_LIKES && likePct >= PCT) parts.push(`👍 +${likeGrow} (${pctText(likePct)})`);
       alerts.push(`🚨 **${c.hfId}** [${c.kind}] ${parts.join(" ")}`);
     }
   }
@@ -156,11 +160,17 @@ console.log(`phase3 peaks: new=${toCreate.length} updated=${toUpdate.length}, ${
 
 if (alerts.length > 0) {
   console.log(`alerts: ${alerts.length}`);
-  await discord(`🤗 HF Monitor 漲幅告警\n${alerts.join("\n")}`);
+  const msg = `🤗 HF Monitor 漲幅告警\n${alerts.join("\n")}`;
+  const ok = await discord(msg);
+  if (!ok) {
+    // 日報有佔位重試，告警也給一次重試（等 10 秒）
+    await new Promise((r) => setTimeout(r, 10000));
+    console.log((await discord(msg)) ? "alerts sent on retry" : "alerts FAILED after retry");
+  }
 }
-// ---- Phase 4：每日摘要（台北 08:00，一天一次，用 DigestLog 去重；08 點內多輪只搶到一封）----
+// ---- Phase 4：每日摘要（台北 08:00 後第一個成功輪發出，一天一次，用 DigestLog 去重）----
 const taipeiHour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Taipei", hour: "numeric", hour12: false }).format(new Date()));
-if (taipeiHour === 8 && DISCORD) {
+if (taipeiHour >= 8 && DISCORD) {
   const dateStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   try {
     await db.digestLog.create({ data: { date: dateStr } }); // 搶到 = 今天第一個，直接發；搶輸（P2002）跳過
@@ -190,6 +200,7 @@ if (taipeiHour === 8 && DISCORD) {
     const growers = curRows
       .filter((h) => oldMap.has(h.hfId))
       .map((h) => ({ hfId: h.hfId, grow: h.likes - oldMap.get(h.hfId).likes, from: oldMap.get(h.hfId).likes, to: h.likes }))
+      .filter((g) => g.grow > 0) // 只列真漲的；全跌的日子這節直接消失，不拿負成長冒充吸粉
       .sort((x, y) => y.grow - x.grow)
       .slice(0, 3);
     const lines = [`📮 HF 熱榜日報 ${dateStr.slice(5).replace("-", "/")}（models）`];
@@ -208,7 +219,7 @@ if (taipeiHour === 8 && DISCORD) {
       if (sent) {
         console.log(`digest sent for ${dateStr}`);
       } else {
-        // 發送失敗就刪掉佔位，讓 08 點內下一輪重試
+        // 發送失敗就刪掉佔位，讓當天內下一輪重試
         await db.digestLog.delete({ where: { date: dateStr } }).catch(() => {});
       }
     });
@@ -218,7 +229,7 @@ if (taipeiHour === 8 && DISCORD) {
 }
 
 // ---- Phase 5：watch 續養（冷門追蹤模型每輪抓一次，一台一次，失敗跳過；上榜模型本來就有不重複算）----
-const watched = await db.watch.findMany({ take: 50 }).catch(() => []);
+const watched = await db.watch.findMany({ orderBy: { createdAt: "asc" }, take: 50 }).catch(() => []);
 if (watched.length > 0) {
   const seg = (k) => (k === "model" ? "models" : k === "dataset" ? "datasets" : "spaces");
   const wrows = [];

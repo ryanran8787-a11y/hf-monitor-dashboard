@@ -1,6 +1,14 @@
 // 迷你 sparkline（純 SVG 無依賴）：watch 清單每行一條。
 // animate=true 時描繪動畫（省電模式自動靜態），給展示頁用
-export default function WatchSpark({ points, animate = false }: { points: number[]; animate?: boolean }) {
+export default function WatchSpark({
+  points,
+  animate = false,
+  label = "trend sparkline",
+}: {
+  points: number[];
+  animate?: boolean;
+  label?: string;
+}) {
   const W = 100;
   const H = 28;
   if (points.length < 2) return <span className="muted text-xs">Accumulating</span>;
@@ -13,7 +21,7 @@ export default function WatchSpark({ points, animate = false }: { points: number
     .join(" ");
   const up = points[points.length - 1] >= points[0];
   return (
-    <svg width={W} height={H} className="shrink-0">
+    <svg width={W} height={H} className="shrink-0" role="img" aria-label={label}>
       <path
         d={d}
         fill="none"

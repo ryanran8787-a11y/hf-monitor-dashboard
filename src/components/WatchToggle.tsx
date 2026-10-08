@@ -24,6 +24,7 @@ export default function WatchToggle({ kind, hfId, initial }: { kind: string; hfI
           body: JSON.stringify({ kind, hfId }),
         });
         if (r.ok) setOn(true);
+        else setFailed(true); // 50 上限 / DB 錯誤不再靜默
       }
       router.refresh();
     } catch {

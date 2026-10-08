@@ -83,7 +83,10 @@ export default function WatchAdder() {
             <div key={h.hfId} className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800">
               <span className="truncate font-mono text-[13px]">{h.hfId}</span>
               <span className="flex shrink-0 items-center gap-2">
-                <span className="muted text-xs tabular-nums">♥{h.likes.toLocaleString()}</span>
+                <span className="muted text-xs tabular-nums">
+                  <span aria-hidden="true">♥</span>
+                  {h.likes.toLocaleString()}
+                </span>
                 <button
                   type="button"
                   disabled={busy}

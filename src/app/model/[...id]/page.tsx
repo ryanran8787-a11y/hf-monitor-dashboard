@@ -87,7 +87,7 @@ export default async function ModelPage({
               Find runnable variants →
             </a>
           )}
-          <WatchToggle kind={kind} hfId={hfId} initial={!!watched} />
+          <WatchToggle key={`${kind}/${hfId}/${!!watched}`} kind={kind} hfId={hfId} initial={!!watched} />
         </div>
       </div>
 
@@ -97,7 +97,7 @@ export default async function ModelPage({
         <div className="card">
           <div className="muted">7d Likes growth</div>
           <div className="mt-1 text-2xl font-semibold tracking-tight text-sky-700 dark:text-sky-400">
-            {likeGrow != null ? `+${likeGrow.toLocaleString()}${likePct != null ? ` (${likePct.toFixed(1)}%)` : ""}` : "-"}
+            {likeGrow != null ? `${likeGrow > 0 ? "+" : ""}${likeGrow.toLocaleString()}${likePct != null ? ` (${likePct.toFixed(1)}%)` : ""}` : "-"}
           </div>
         </div>
         <div className="card">

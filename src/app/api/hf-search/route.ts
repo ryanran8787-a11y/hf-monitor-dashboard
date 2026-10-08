@@ -21,7 +21,8 @@ export async function GET(req: Request) {
   try {
     const res = await fetch(`${API}/${path}?search=${encodeURIComponent(q)}&limit=20&sort=likes&direction=-1`, {
       headers: headers(),
-      cache: "no-store",
+      // 前端 300ms debounce 照樣每鍵都打；緩 120 秒擋配額被刷爆
+      next: { revalidate: 120 },
     });
     if (!res.ok) return NextResponse.json({ error: `HF ${res.status}` }, { status: 502 });
     const json: any[] = await res.json();

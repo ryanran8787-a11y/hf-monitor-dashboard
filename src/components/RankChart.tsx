@@ -29,7 +29,7 @@ export default function RankChart({ data, series }: { data: Record<string, any>[
           <Tooltip
             contentStyle={{ background: c.tipBg, border: `1px solid ${c.tipBd}`, borderRadius: 8, fontSize: 12 }}
             labelStyle={{ color: c.tipTx }}
-            formatter={(v: any) => (v == null ? ["Unranked", ""] : [`#${v}`, ""])}
+            formatter={(v: any, name: any) => (v == null ? ["Unranked", name] : [`#${v}`, name])}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: c.legend }} />
           {series.map((s) => (

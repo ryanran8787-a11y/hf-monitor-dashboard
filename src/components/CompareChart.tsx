@@ -27,7 +27,7 @@ export default function CompareChart({ data, series }: { data: Record<string, an
           <Tooltip
             contentStyle={{ background: c.tipBg, border: `1px solid ${c.tipBd}`, borderRadius: 8, fontSize: 12 }}
             labelStyle={{ color: c.tipTx }}
-            formatter={(v: any) => (v == null ? ["-", ""] : [Number(v).toLocaleString(), ""])}
+            formatter={(v: any, name: any) => (v == null ? ["-", name] : [Number(v).toLocaleString(), name])}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: c.legend }} />
           {series.map((s) => (

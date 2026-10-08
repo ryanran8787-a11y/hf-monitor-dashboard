@@ -8,8 +8,7 @@ export interface Candidate {
   updatedAt: string; // ISO
 }
 
-// 共用元件：搜尋有歷史資料的模型。
-// PK 頁先用，之後 watchlist 直接 import（props 不變即插即用）。
+// 共用元件：搜尋有歷史資料的模型（PK 頁用；watch 加入框是另一個即時搜 HF 的 WatchAdder）。
 export default function ModelPicker({
   label,
   color,
@@ -41,16 +40,29 @@ export default function ModelPicker({
       <input
         value={open ? q : value}
         placeholder="Type to search…"
+        aria-label={label}
+        role="combobox"
+        aria-expanded={open}
         onChange={(e) => setQ(e.target.value)}
         onFocus={() => {
           setQ("");
           setOpen(true);
         }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onKeyDown={(e) => {
+          // 鍵盤可用：Enter 直接選第一個結果
+          if (e.key === "Enter" && list.length > 0) {
+            e.preventDefault();
+            onChange(list[0].hfId);
+            setOpen(false);
+            (e.target as HTMLInputElement).blur();
+          }
+          if (e.key === "Escape") setOpen(false);
+        }}
         className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
       />
       {open && (
-        <div className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+        <div role="listbox" className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           {list.length === 0 && <div className="muted px-3 py-2 text-sm">No match (only ex-Top-20 repos have history)</div>}
           {list.map((c) => (
             <button
@@ -65,7 +77,8 @@ export default function ModelPicker({
             >
               <span className="truncate font-mono text-[13px]">{c.hfId}</span>
               <span className="muted shrink-0 text-xs tabular-nums">
-                ♥{c.likes.toLocaleString()} · {c.points} pts
+                <span aria-hidden="true">♥</span>
+                {c.likes.toLocaleString()} · {c.points} pts
               </span>
             </button>
           ))}

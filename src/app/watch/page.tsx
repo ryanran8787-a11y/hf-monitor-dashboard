@@ -33,8 +33,16 @@ export default async function WatchPage() {
       })
       .catch(() => []);
     const lastDl = new Map<string, number>();
+    const lastMin = new Map<string, number>();
     for (const h of hist) {
       const k = `${h.kind}/${h.hfId}`;
+      // 同分鐘多榜單會重複打點：每分鐘只留一點，spark 才覆蓋整段牆鐘時間
+      const min = Math.floor(new Date(h.createdAt).getTime() / 60000);
+      if (lastMin.get(k) === min) {
+        lastDl.set(k, h.downloads);
+        continue;
+      }
+      lastMin.set(k, min);
       let s = stats.get(k);
       if (!s) {
         s = { likes: [], first: h.likes, last: h.likes, dl: h.downloads };
@@ -83,7 +91,7 @@ export default async function WatchPage() {
                     </td>
                     <td>{s ? <WatchSpark points={s.likes.slice(-48)} /> : <span className="muted text-xs">Accumulating</span>}</td>
                     <td className="muted whitespace-nowrap tabular-nums">{fmtD(new Date(w.createdAt))}</td>
-                    <td><WatchToggle kind={w.kind} hfId={w.hfId} initial={true} /></td>
+                    <td><WatchToggle key={`${w.kind}/${w.hfId}/on`} kind={w.kind} hfId={w.hfId} initial={true} /></td>
                   </tr>
                 );
               })}

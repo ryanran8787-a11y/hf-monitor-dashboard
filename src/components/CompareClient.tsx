@@ -85,10 +85,10 @@ export default function CompareClient({
             <div className="card">
               <div className="muted text-xs">Likes growth (7d)</div>
               <div className="mt-1 text-xl font-semibold tabular-nums" style={{ color: A_COLOR }}>
-                A {summary.aGrowLikes != null ? `+${summary.aGrowLikes.toLocaleString()}` : "-"}
+                A {summary.aGrowLikes != null ? `${summary.aGrowLikes > 0 ? "+" : ""}${summary.aGrowLikes.toLocaleString()}` : "-"}
               </div>
               <div className="mt-1 text-xl font-semibold tabular-nums" style={{ color: B_COLOR }}>
-                B {summary.bGrowLikes != null ? `+${summary.bGrowLikes.toLocaleString()}` : "-"}
+                B {summary.bGrowLikes != null ? `${summary.bGrowLikes > 0 ? "+" : ""}${summary.bGrowLikes.toLocaleString()}` : "-"}
               </div>
             </div>
             <div className="card">
@@ -128,7 +128,7 @@ export default function CompareClient({
                 <p className="muted mt-1 text-xs">Only Top-20 points. Gaps mean off-chart. Higher = better.</p>
               </>
             ) : (
-              <p className="muted">Ranking data accumulating. Needs both sides on-chart.</p>
+              <p className="muted">Ranking data accumulating.</p>
             )}
           </div>
         </>

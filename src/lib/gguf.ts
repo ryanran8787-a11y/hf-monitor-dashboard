@@ -14,8 +14,8 @@ export interface GgufFile {
   bytes: number;
 }
 
-// 量化標籤寫在 .gguf 前面，後面允許跟 -imat 之類後綴：model-Q4_K_M.gguf / model-Q4_K_M-imat.gguf / model-f16.gguf
-const QUANT_RE = /(?:^|[-_.])(Q\d(?:_\w+)?|IQ\d_\w+|F16|F32|BF16)(?=[-_.].*\.gguf$|\.gguf$)/i;
+// 量化標籤寫在 .gguf 前面，後面允許跟 -imat 之類後綴：model-Q4_K_M.gguf / model-Q4_K_M-imat.gguf / model-f16.gguf / model-IQ4XS.gguf
+const QUANT_RE = /(?:^|[-_.])(Q\d(?:_\w+)?|IQ\d\w*|F16|F32|BF16)(?=[-_.].*\.gguf$|\.gguf$)/i;
 
 export function parseQuantTag(filename: string): string | null {
   const base = filename.split("/").pop() ?? filename;
@@ -38,7 +38,8 @@ export function findGgufFiles(entries: TreeEntry[]): GgufFile[] {
   return out.sort((a, b) => a.bytes - b.bytes);
 }
 
-// 分片 GGUF（model-Q4_K_M-00001-of-00003.gguf）按量化標籤合併：下載體積要加總才對
+// 分片 GGUF（model-Q4_K_M-00001-of-00003.gguf）按量化標籤合併：下載體積要加總才對。
+// 同倉若有兩個同量化不同模型（8B-Q4_K_M＋70B-Q4_K_M），按檔名主幹分開，不混算。
 export interface GgufGroup {
   quant: string;
   bytes: number;
@@ -47,28 +48,40 @@ export interface GgufGroup {
   full: string; // 下載連結用（第一個檔的完整路徑）
 }
 
+function groupKey(name: string, quant: string): string {
+  const stem = name
+    .replace(/\.gguf$/i, "")
+    .replace(/-\d+-of-\d+$/i, "") // 分片後綴去掉才是一組
+    .replace(new RegExp(`[-_.]${quant}$`, "i"), ""); // 量化標籤去掉，剩模型主幹
+  return `${quant}|${stem}`;
+}
+
 export function groupGguf(files: GgufFile[]): GgufGroup[] {
   const m = new Map<string, GgufGroup>();
   for (const f of files) {
-    const g = m.get(f.quant) ?? { quant: f.quant, bytes: 0, count: 0, sample: f.name, full: f.full };
+    const k = groupKey(f.name, f.quant);
+    const g = m.get(k) ?? { quant: f.quant, bytes: 0, count: 0, sample: f.name, full: f.full };
     g.bytes += f.bytes;
     g.count += 1;
-    m.set(f.quant, g);
+    m.set(k, g);
   }
   return Array.from(m.values()).sort((a, b) => a.bytes - b.bytes);
 }
 
-// 非 GGUF 量化（AWQ/GPTQ/原版）的精確權重體積：*.safetensors（＋舊式 *.bin）加總，tree API 全倉都有 size
+// 非 GGUF 量化（AWQ/GPTQ/原版）的精確權重體積：*.safetensors（＋舊式 *.bin）加總，tree API 全倉都有 size。
+// 訓練副產品（training_args/optimizer/scheduler/rng_state）不是權重，排除。
+const JUNK_BIN = /^(training_args|optimizer|scheduler|rng_state|scaler|trainer_state)/i;
 export function sumWeightFiles(entries: TreeEntry[]): { bytes: number; count: number } {
   let bytes = 0;
   let count = 0;
   for (const e of entries) {
     if (e.type !== "file" || typeof e.size !== "number") continue;
-    const base = (e.path.split("/").pop() ?? e.path).toLowerCase();
-    if (base.endsWith(".safetensors") || base.endsWith(".bin")) {
-      bytes += e.size;
-      count += 1;
-    }
+    const base = e.path.split("/").pop() ?? e.path;
+    const low = base.toLowerCase();
+    if (!low.endsWith(".safetensors") && !low.endsWith(".bin")) continue;
+    if (JUNK_BIN.test(base)) continue;
+    bytes += e.size;
+    count += 1;
   }
   return { bytes, count };
 }
@@ -98,7 +111,7 @@ export function estimateBytes(params: number, quant: string): number | null {
 
 // ---- 變體搜尋：repo 名後綴判斷家族與類型（啟發式，僅供參考）----
 
-// 直達下載連結（手機點了丟給 PocketPal）
+// 直達下載連結（手機點了丟給 PocketPal）。分支寫死 main：GGUF 倉幾乎全是 main，雜支倉會 404（可接受的邊界）。
 export function resolveUrl(repo: string, path: string): string {
   const p = path
     .split("/")
@@ -129,13 +142,21 @@ export function classifyRepo(hfId: string, tags: string[] = []): { kind: Variant
 
 // ---- HF API ----
 export async function fetchRepoTree(repoId: string, token = ""): Promise<TreeEntry[]> {
-  const r = await fetch(`https://huggingface.co/api/models/${repoId}/tree/main?recursive=true`, {
-    headers: { "User-Agent": "hf-monitor/0.1", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    next: { revalidate: 3600 }, // 檔案樹不常變，緩一小時省配額
-  });
-  if (!r.ok) throw new Error(`tree ${r.status}`);
-  const j = await r.json();
-  return Array.isArray(j) ? j : [];
+  // 單倉卡住不拖整頁：15 秒超時當失敗跳過
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch(`https://huggingface.co/api/models/${repoId}/tree/main?recursive=true`, {
+      headers: { "User-Agent": "hf-monitor/0.1", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      next: { revalidate: 3600 }, // 檔案樹不常變，緩一小時省配額
+      signal: ctrl.signal,
+    });
+    if (!r.ok) throw new Error(`tree ${r.status}`);
+    const j = await r.json();
+    return Array.isArray(j) ? j : [];
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function searchRepos(query: string, limit: number, token = ""): Promise<any[]> {

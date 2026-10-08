@@ -53,9 +53,15 @@ export async function fetchList(
 }
 
 // 單一 repo 詳情（含 lastModified、siblings 等列表 API 沒有的欄位）
+const HFID = /^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)?$/; // 跟 /api/watch 同一白名單
 export async function fetchOne(kind: HFKind, hfId: string): Promise<any | null> {
+  if (!HFID.test(hfId)) return null;
   const path = kind === "model" ? "models" : kind === "dataset" ? "datasets" : "spaces";
-  const res = await fetch(`${API}/${path}/${hfId}`, { headers: headers(), next: { revalidate: 600 } });
+  const seg = hfId
+    .split("/")
+    .map((s) => encodeURIComponent(s))
+    .join("/");
+  const res = await fetch(`${API}/${path}/${seg}`, { headers: headers(), next: { revalidate: 600 } });
   if (!res.ok) return null;
   return res.json();
 }

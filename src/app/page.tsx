@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { fetchList } from "@/lib/hf";
+import { fmtT } from "@/lib/absMerge";
 import TrendChart from "@/components/TrendChart";
 import TaskBars, { TaskSlice } from "@/components/TaskBars";
 import TaskShareChart, { ShareSeries } from "@/components/TaskShareChart";
@@ -14,10 +15,6 @@ interface GenreIndexRow {
   [k: string]: string | number | null;
 }
 
-function fmtT(d: Date) {
-  return d.toLocaleString("en-US", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
 const SORTS = [
   { key: "trendingScore", label: "Trending" },
   { key: "likes", label: "Likes" },
@@ -25,16 +22,31 @@ const SORTS = [
   { key: "lastModified", label: "New" },
 ] as const;
 
+// lastModified 存的是 UTC ISO，直接 slice 會在午夜差一天；按台北轉日期
+function fmtDate(s: string | null | undefined) {
+  if (!s) return "-";
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s.slice(0, 10);
+  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+}
+
 async function getLatest(kind: string, sort: string) {
-  // 先讀 DB 快照（按 kind + sortBy 精確過濾），沒有就即時打 HF API
+  // 先讀 DB 快照：取最新一輪（最新點往前 3 分鐘聚輪，兼容舊 ms 散戳），沒有就即時打 HF API
   const rows = await db.snapshot
     .findMany({
       where: { kind, sortBy: sort },
       orderBy: [{ createdAt: "desc" }, { rank: "asc" }],
-      take: 50,
+      take: 60,
     })
     .catch(() => []);
-  if (rows.length > 0) return { rows, live: false };
+  if (rows.length > 0) {
+    const top = new Date((rows[0] as any).createdAt).getTime();
+    const round = rows
+      .filter((r) => top - new Date((r as any).createdAt).getTime() <= 3 * 60 * 1000)
+      .sort((a: any, b: any) => a.rank - b.rank)
+      .slice(0, 50);
+    if (round.length > 0) return { rows: round, live: false };
+  }
   const items = await fetchList(kind as any, { sort: sort as any, limit: 50 }).catch(() => []);
   return {
     rows: items.map((x, i) => ({ ...x, hfId: x.id, rank: i + 1, createdAt: new Date() })),
@@ -66,14 +78,19 @@ export default async function Page({
   let shareRows: GenreIndexRow[] = [];
   let shareSeries: ShareSeries[] = [];
   if (kind === "model") {
-    // 版圖：當期熱門榜 Top50 按 task 分組（快照現成，零額外成本）
-    const snap = await db.snapshot
+    // 版圖：當期熱門榜 Top50 按 task 分組（快照現成，零額外成本；同樣聚最新一輪，防殘輪混入）
+    const snapRaw = await db.snapshot
       .findMany({
         where: { kind: "model", sortBy: "trendingScore" },
         orderBy: [{ createdAt: "desc" }, { rank: "asc" }],
-        take: 50,
+        take: 60,
       })
       .catch(() => []);
+    const snapTop = snapRaw.length > 0 ? new Date((snapRaw[0] as any).createdAt).getTime() : 0;
+    const snap = snapRaw
+      .filter((r) => snapTop - new Date((r as any).createdAt).getTime() <= 3 * 60 * 1000)
+      .sort((a: any, b: any) => a.rank - b.rank)
+      .slice(0, 50);
     const byTask = new Map<string, { count: number; likes: number }>();
     for (const r of snap) {
       const t = r.task || "Uncategorized";
@@ -208,7 +225,8 @@ export default async function Page({
       </div>
 
       <div className="card">
-        <h2 className="section-title mb-3">{sortLabel} Top 10</h2>
+        <h2 className="section-title mb-1">{sortLabel} Top 10</h2>
+        <p className="muted mb-3 text-xs">Bars show {metricKey} (snapshots store no trending score).</p>
         <TrendChart
           data={rows.slice(0, 10).map((r: any) => ({ name: r.hfId, value: r[metricKey] ?? 0 }))}
         />
@@ -252,7 +270,7 @@ export default async function Page({
                 <td className="text-right tabular-nums">{r.likes?.toLocaleString?.() ?? r.likes}</td>
                 <td className="text-right tabular-nums">{r.downloads?.toLocaleString?.() ?? r.downloads ?? "-"}</td>
                 <td><span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{r.task ?? "-"}</span></td>
-                <td className="muted whitespace-nowrap tabular-nums">{r.lastModified?.slice(0, 10) ?? "-"}</td>
+                <td className="muted whitespace-nowrap tabular-nums">{fmtDate((r as any).lastModified)}</td>
               </tr>
             ))}
           </tbody>

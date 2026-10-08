@@ -26,7 +26,6 @@ type Row = { kind: string; hfId: string; likes: number; createdAt: Date };
 // 玩票 showcase 頁：純展示，不擋 `/`；數字全是活的，壞了顯示 －
 export default async function WelcomePage() {
   let latest: Date | null = null;
-  let alive = new Set<string>();
   let histTotal: number | null = null;
   let histDay: number | null = null;
   let watchCount: number | null = null;
@@ -40,14 +39,8 @@ export default async function WelcomePage() {
   try {
     const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
     const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
-    const [s, snap, hTotal, hDay, wCount] = await Promise.all([
+    const [s, hTotal, hDay, wCount] = await Promise.all([
       db.snapshot.findFirst({ orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
-      db.snapshot.findMany({
-        where: { createdAt: { gte: new Date(Date.now() - 2 * 3600 * 1000) } },
-        select: { kind: true, sortBy: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 1500,
-      }),
       db.metricHistory.count(),
       db.metricHistory.count({ where: { createdAt: { gte: dayAgo } } }),
       db.watch.count(),
@@ -56,13 +49,6 @@ export default async function WelcomePage() {
     histTotal = hTotal;
     histDay = hDay;
     watchCount = wCount;
-    if (snap.length > 0) {
-      const top = new Date(snap[0].createdAt).getTime();
-      for (const r of snap) {
-        if (top - new Date(r.createdAt).getTime() > 3 * 60 * 1000) break;
-        alive.add(`${r.kind}/${r.sortBy}`);
-      }
-    }
 
     // 各類別 24h 漲幅 Top3（同 repo 取首尾，附 sparkline）
     const day = (await db.metricHistory
