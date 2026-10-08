@@ -37,6 +37,40 @@ export function findGgufFiles(entries: TreeEntry[]): GgufFile[] {
   return out.sort((a, b) => a.bytes - b.bytes);
 }
 
+// 分片 GGUF（model-Q4_K_M-00001-of-00003.gguf）按量化標籤合併：下載體積要加總才對
+export interface GgufGroup {
+  quant: string;
+  bytes: number;
+  count: number;
+  sample: string;
+}
+
+export function groupGguf(files: GgufFile[]): GgufGroup[] {
+  const m = new Map<string, GgufGroup>();
+  for (const f of files) {
+    const g = m.get(f.quant) ?? { quant: f.quant, bytes: 0, count: 0, sample: f.name };
+    g.bytes += f.bytes;
+    g.count += 1;
+    m.set(f.quant, g);
+  }
+  return Array.from(m.values()).sort((a, b) => a.bytes - b.bytes);
+}
+
+// 非 GGUF 量化（AWQ/GPTQ/原版）的精確權重體積：*.safetensors（＋舊式 *.bin）加總，tree API 全倉都有 size
+export function sumWeightFiles(entries: TreeEntry[]): { bytes: number; count: number } {
+  let bytes = 0;
+  let count = 0;
+  for (const e of entries) {
+    if (e.type !== "file" || typeof e.size !== "number") continue;
+    const base = (e.path.split("/").pop() ?? e.path).toLowerCase();
+    if (base.endsWith(".safetensors") || base.endsWith(".bin")) {
+      bytes += e.size;
+      count += 1;
+    }
+  }
+  return { bytes, count };
+}
+
 // GB 口徑跟 PocketPal 一致：bytes / 1024^3，小檔顯示 MB
 export function fmtSize(bytes: number): string {
   const gib = bytes / 1024 ** 3;

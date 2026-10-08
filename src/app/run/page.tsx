@@ -3,6 +3,8 @@ import {
   searchRepos,
   fetchRepoTree,
   findGgufFiles,
+  groupGguf,
+  sumWeightFiles,
   classifyRepo,
   fmtSize,
   ramGb,
@@ -42,6 +44,20 @@ interface VariantRow {
   bytes: number;
 }
 
+interface WeightRow {
+  repo: string;
+  uncensored: boolean;
+  label: string;
+  bytes: number;
+}
+
+const KIND_LABEL: Record<string, string> = {
+  awq: "AWQ",
+  gptq: "GPTQ",
+  "other-quant": "quant",
+  original: "weights",
+};
+
 // 三燈號：est RAM 能否塞進手機／筆電／桌機（估算，僅供參考）
 function Lamps({ ram }: { ram: number }) {
   return (
@@ -64,6 +80,7 @@ export default async function RunPage({ searchParams }: { searchParams: { q?: st
   let loadError = "";
   let cands: Cand[] = [];
   let rows: VariantRow[] = [];
+  let weights: WeightRow[] = [];
   let estRows: { quant: string; bytes: number }[] = [];
   let paramsNote: number | null = null;
 
@@ -91,20 +108,39 @@ export default async function RunPage({ searchParams }: { searchParams: { q?: st
       }
       for (const x of raw) push(x);
 
-      // 只給 GGUF 類打 tree（cap 上限），逐個失敗互不影響
-      const targets = cands.filter((c) => classifyRepo(c.hfId, c.tags).kind === "gguf").slice(0, TREE_CAP);
+      // tree 打兩類：GGUF 優先，其餘候選補位（同樣 cap 上限）；逐個失敗互不影響
+      const ggufs = cands.filter((c) => classifyRepo(c.hfId, c.tags).kind === "gguf");
+      const others = cands.filter((c) => classifyRepo(c.hfId, c.tags).kind !== "gguf");
+      const targets = ggufs.concat(others).slice(0, TREE_CAP);
       await Promise.all(
         targets.map(async (c) => {
           try {
-            const files = findGgufFiles(await fetchRepoTree(c.hfId, HF_TOKEN));
-            const un = classifyRepo(c.hfId, c.tags).uncensored;
-            for (const f of files) rows.push({ repo: c.hfId, uncensored: un, file: f.name, quant: f.quant, bytes: f.bytes });
+            const tree = await fetchRepoTree(c.hfId, HF_TOKEN);
+            const cls = classifyRepo(c.hfId, c.tags);
+            const groups = groupGguf(findGgufFiles(tree));
+            for (const g of groups) {
+              rows.push({
+                repo: c.hfId,
+                uncensored: cls.uncensored,
+                file: g.count > 1 ? `${g.sample} +${g.count - 1} more` : g.sample,
+                quant: g.quant,
+                bytes: g.bytes,
+              });
+            }
+            // 非 GGUF 倉：safetensors 加總就是精確權重體積
+            if (groups.length === 0 && cls.kind !== "gguf") {
+              const w = sumWeightFiles(tree);
+              if (w.bytes > 0) {
+                weights.push({ repo: c.hfId, uncensored: cls.uncensored, label: KIND_LABEL[cls.kind] ?? "weights", bytes: w.bytes });
+              }
+            }
           } catch {
             // 401（需授權）或 404 直接跳過該倉
           }
         })
       );
       rows.sort((a, b) => a.bytes - b.bytes);
+      weights.sort((a, b) => a.bytes - b.bytes);
 
       // 參數總量：本尊優先，否則第一個有名堂的候選；缺失的檔位用估算補上（標 ~）
       paramsNote = cands.find((c) => c.params != null)?.params ?? null;
@@ -201,6 +237,56 @@ export default async function RunPage({ searchParams }: { searchParams: { q?: st
               </p>
             )}
           </div>
+
+          {weights.length > 0 && (
+            <div className="card overflow-x-auto !p-0">
+              <h2 className="section-title px-5 pb-1 pt-5">Exact weights, non-GGUF ({weights.length})</h2>
+              <table className="data min-w-[640px]">
+                <thead>
+                  <tr>
+                    <th>Repo</th>
+                    <th>Type</th>
+                    <th className="text-right">Size</th>
+                    <th className="text-right">Est. RAM</th>
+                    <th>Fits phone / laptop / desktop</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weights.map((w) => {
+                    const ram = ramGb(w.bytes);
+                    return (
+                      <tr key={`${w.repo}/${w.label}`}>
+                        <td className="font-mono text-[13px]">
+                          <a className="link" href={`/model/${w.repo}?kind=model`}>
+                            {w.repo}
+                          </a>{" "}
+                          {w.uncensored && (
+                            <span
+                              title="Name/tag match, unverified"
+                              className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                            >
+                              uncensored?
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <span className="rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            {w.label}
+                          </span>
+                        </td>
+                        <td className="text-right tabular-nums">{fmtSize(w.bytes)}</td>
+                        <td className="text-right tabular-nums">~{ram.toFixed(1)} GB</td>
+                        <td>
+                          <Lamps ram={ram} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="muted px-5 pb-5 text-xs">Summed *.safetensors (+ old *.bin) from the repo file tree. Exact, not estimated.</p>
+            </div>
+          )}
 
           {estRows.length > 0 && (
             <div className="card overflow-x-auto !p-0">
