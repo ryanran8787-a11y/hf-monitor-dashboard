@@ -8,7 +8,8 @@ export interface TreeEntry {
 }
 
 export interface GgufFile {
-  name: string; // basename
+  name: string; // basename（顯示用）
+  full: string; // 倉內完整路徑（resolve 下載連結用）
   quant: string; // Q4_K_M / Q8_0 / F16 ...
   bytes: number;
 }
@@ -32,7 +33,7 @@ export function findGgufFiles(entries: TreeEntry[]): GgufFile[] {
     if (/^mmproj/i.test(base)) continue;
     const q = parseQuantTag(e.path);
     if (!q) continue;
-    out.push({ name: base, quant: q, bytes: e.size });
+    out.push({ name: base, full: e.path, quant: q, bytes: e.size });
   }
   return out.sort((a, b) => a.bytes - b.bytes);
 }
@@ -42,13 +43,14 @@ export interface GgufGroup {
   quant: string;
   bytes: number;
   count: number;
-  sample: string;
+  sample: string; // 顯示用（第一個檔的 basename）
+  full: string; // 下載連結用（第一個檔的完整路徑）
 }
 
 export function groupGguf(files: GgufFile[]): GgufGroup[] {
   const m = new Map<string, GgufGroup>();
   for (const f of files) {
-    const g = m.get(f.quant) ?? { quant: f.quant, bytes: 0, count: 0, sample: f.name };
+    const g = m.get(f.quant) ?? { quant: f.quant, bytes: 0, count: 0, sample: f.name, full: f.full };
     g.bytes += f.bytes;
     g.count += 1;
     m.set(f.quant, g);
@@ -95,6 +97,15 @@ export function estimateBytes(params: number, quant: string): number | null {
 }
 
 // ---- 變體搜尋：repo 名後綴判斷家族與類型（啟發式，僅供參考）----
+
+// 直達下載連結（手機點了丟給 PocketPal）
+export function resolveUrl(repo: string, path: string): string {
+  const p = path
+    .split("/")
+    .map((s) => encodeURIComponent(s))
+    .join("/");
+  return `https://huggingface.co/${repo}/resolve/main/${p}`;
+}
 const QUANT_SUFFIX = /-(GGUF|AWQ|GPTQ|EXL2|HQQ|BNB|MLX|GGML|FP16|FP8|INT8|INT4)$/i;
 const UNCENSORED_RE = /(uncensor|abliterat|unfilter|jailbreak|nsfw|lewd)/i;
 

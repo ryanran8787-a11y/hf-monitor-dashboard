@@ -9,6 +9,7 @@ import {
   fmtSize,
   ramGb,
   estimateBytes,
+  resolveUrl,
 } from "@/lib/gguf";
 
 export const revalidate = 600;
@@ -40,6 +41,7 @@ interface VariantRow {
   repo: string;
   uncensored: boolean;
   file: string;
+  path: string;
   quant: string;
   bytes: number;
 }
@@ -123,6 +125,7 @@ export default async function RunPage({ searchParams }: { searchParams: { q?: st
                 repo: c.hfId,
                 uncensored: cls.uncensored,
                 file: g.count > 1 ? `${g.sample} +${g.count - 1} more` : g.sample,
+                path: g.full,
                 quant: g.quant,
                 bytes: g.bytes,
               });
@@ -214,7 +217,11 @@ export default async function RunPage({ searchParams }: { searchParams: { q?: st
                         )}
                         <span className="muted ml-1 text-xs tabular-nums">#{i + 1}</span>
                       </td>
-                      <td className="font-mono text-[13px]">{r.file}</td>
+                      <td className="font-mono text-[13px]">
+                        <a className="link" href={resolveUrl(r.repo, r.path)} target="_blank" title="Direct download from HF">
+                          {r.file}
+                        </a>
+                      </td>
                       <td>
                         <span className="rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                           {r.quant}
